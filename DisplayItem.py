@@ -84,7 +84,7 @@ class DisplayItem():
         return item_claim
 
     def get_label(self, str_value):
-        mfw = wdi_core.WDItemEngine(wd_item_id=str_value, server=self.server)
+        mfw = wdi_core.WDItemEngine(wd_item_id=str_value, server=self.server, search_only=True)
         mfw_d = mfw.get_wd_json_representation()
         desc = mfw_d['labels']
         en_desc = desc['en']
