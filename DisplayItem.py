@@ -14,28 +14,37 @@ class DisplayItem():
         self.show_claims()
 
     def show_description(self):
-        desc = self.item['descriptions']
-        value = 'No English Description'
-        if 'en' in desc:
-            en_desc = desc['en']
-            if 'value' in en_desc:
-                value = en_desc['value']
+        if 'descriptions' not in self.item:
+            value = 'No descriptions at all'
+        else:
+            desc = self.item['descriptions']
+            value = 'No English Description'
+            if 'en' in desc:
+                en_desc = desc['en']
+                if 'value' in en_desc:
+                    value = en_desc['value']
         print('Description: ', value)
 
     def show_label(self):
-        desc = self.item['labels']
-        value = 'No English Label'
-        if 'en' in desc:
-            en_desc = desc['en']
-            if 'value' in en_desc:
-                value = en_desc['value']
+        if 'labels' not in self.item:
+            value = 'No labels at all'
+        else:
+            desc = self.item['labels']
+            value = 'No English Label'
+            if 'en' in desc:
+                en_desc = desc['en']
+                if 'value' in en_desc:
+                    value = en_desc['value']
         print('Label: ', value)
 
     def show_claims(self):
-        claims = self.item['claims']
-        print('Claims:')
-        for claim_val in claims:
-            self.show_claim(claims[claim_val])
+         if 'claims' not in self.item:
+            print('No claims field')
+         else:
+            claims = self.item['claims']
+            print('Claims:')
+            for claim_val in claims:
+                self.show_claim(claims[claim_val])
 
     def show_claim(self, claim):
         for i in range(0, len(claim)):
