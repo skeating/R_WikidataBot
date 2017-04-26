@@ -56,14 +56,23 @@ class DisplayItem():
             print('{0}: {1} {2}'.format(claim_type, self.get_label(claim_property), claim_value))
             if 'qualifiers-order' in claim[i] and 'qualifiers' in claim[i]:
                 self.write_qualifiers(claim[i])
+                if 'references' in claim[i]:
+                    self.write_references(claim[i])
 
     def write_qualifiers(self, claim):
         for qual in claim['qualifiers-order']:
             self.show_qualifier(claim['qualifiers'][qual])
 
-    def show_qualifier(self, claim):
+    def write_references(self, claim):
+        for ref in claim['references']:
+            self.show_reference(ref)
+
+    def show_reference(self, reference):
+        for qual in reference['snaks-order']:
+            self.show_qualifier(reference['snaks'][qual], claim_type='reference')
+
+    def show_qualifier(self, claim, claim_type='qualifier'):
         for i in range(0, len(claim)):
-            claim_type = 'qualifier'
             [claim_property, claim_value] = self.get_property_value(claim[i])
             print('{0}: {1} {2}'.format(claim_type, self.get_label(claim_property), claim_value))
 
@@ -73,6 +82,8 @@ class DisplayItem():
             claim_value = self.get_string_claim(obj)
         elif obj['datatype'] == 'wikibase-item':
             claim_value = self.get_item_claim(obj)
+        elif obj['datatype'] == 'time':
+            claim_value = obj['datavalue']['value']['time']
         else:
             print('Unexpected type {0} encountered'.format(obj['datatype']))
             claim_value = 'No claim value'
