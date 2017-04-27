@@ -15,6 +15,9 @@ from SPARQLWrapper import SPARQLWrapper, JSON
 #server='test.wikidata.org'
 server='www.wikidata.org'
 
+supported_species = [dict({'ReactomeCode': 'HSA', 'name': 'Homo sapiens', 'WDItem': 'Q15978631'})]
+current_species = 0 # index of species
+
 # Stating SPARQL endpoints
 wikidata_sparql = SPARQLWrapper("https://query.wikidata.org/bigdata/namespace/wdq/sparql")
 wikidata_sparql.setReturnFormat(JSON)
@@ -82,7 +85,7 @@ def add_citations(prep, result, reference):
                                            references=[copy.deepcopy(reference)]))
 
 
-def create_or_update_items(logincreds, results):
+def create_or_update_items(logincreds, results, test=0):
     """ this function takes the results dictionary from Reactome;
     which hopefully emulates the JSON returned by the wikipathways query;
     and adds or updates each item
@@ -106,48 +109,58 @@ def create_or_update_items(logincreds, results):
     """
     prep = dict()
     for result in results["results"]["bindings"]:
-        reference = create_reference(result)
-        match_url = "http://identifiers.org/reactome/REACTOME:"+result["pwId"]["value"]
-        print('Creating/updating pathway: ' + result["pwId"]["value"])
+        create_or_update_item(logincreds, result, test, prep)
 
-        # P31 = instance of pathway
-        prep["P31"] = [wdi_core.WDItemID(value="Q28864279",prop_nr="P31", references=[copy.deepcopy(reference)])]
+def create_or_update_item(logincreds, result, test, prep):
+    reference = create_reference(result)
+    match_url = "http://identifiers.org/reactome/REACTOME:"+result["pwId"]["value"]
+    print('Creating/updating pathway: ' + result["pwId"]["value"])
 
-        # P2888 = exact match
-        prep["P2888"] = [wdi_core.WDUrl(match_url, prop_nr='P2888', references=[copy.deepcopy(reference)])]
+    # P31 = instance of pathway
+    prep["P31"] = [wdi_core.WDItemID(value="Q28864279",prop_nr="P31", references=[copy.deepcopy(reference)])]
 
-        # P703 = found in taxon, Q15978631 = "Homo sapiens"
-        prep["P703"] = [wdi_core.WDItemID(value="Q15978631", prop_nr='P703', references=[copy.deepcopy(reference)])]
+    # P2888 = exact match
+    prep["P2888"] = [wdi_core.WDUrl(match_url, prop_nr='P2888', references=[copy.deepcopy(reference)])]
 
-        # pmid queries happen here
-        add_citations(prep, result, reference)
-        data2add = []
-        for key in prep.keys():
-            for statement in prep[key]:
-                data2add.append(statement)
- #               print(statement.prop_nr, statement.value)
-        # wdPage = wdi_core.WDItemEngine( item_name=result["pwLabel"]["value"], data=data2add, server="www.wikidata.org", domain="genes", fast_run=fast_run, fast_run_base_filter=fast_run_base_filter)
-        wdPage = wdi_core.WDItemEngine(item_name=result["pwLabel"]["value"], data=data2add, server="www.wikidata.org",
-                                       domain="pathway")
+    # P703 = found in taxon
+    prep["P703"] = [wdi_core.WDItemID(value=supported_species[current_species]['WDItem'], prop_nr='P703', references=[copy.deepcopy(reference)])]
 
-        wdPage.set_label(result["pwLabel"]["value"])
-        wdPage.set_description (result['pwDescription']['value'])
+    # pmid queries happen here
+    add_citations(prep, result, reference)
+    data2add = []
+    for key in prep.keys():
+        for statement in prep[key]:
+            data2add.append(statement)
+#               print(statement.prop_nr, statement.value)
+    # wdPage = wdi_core.WDItemEngine( item_name=result["pwLabel"]["value"], data=data2add, server="www.wikidata.org", domain="genes", fast_run=fast_run, fast_run_base_filter=fast_run_base_filter)
+    wdPage = wdi_core.WDItemEngine(item_name=result["pwLabel"]["value"], data=data2add, server=server,
+                                   domain="pathway")
+
+    wdPage.set_label(result["pwLabel"]["value"])
+    wdPage.set_description (result['pwDescription']['value'])
 
 #        wd_json_representation = wdPage.get_wd_json_representation()
 #        pprint.pprint(wd_json_representation)
 
-        return_value = 0
-        if (server == 'test.wikidata.org'):
-           return_value = wdPage.write(logincreds)
+    item_id_value = 0
+    if (server == 'test.wikidata.org'):
+       item_id_value = wdPage.write(logincreds)
 
-        if return_value != 0:
-            show_item(return_value)
+    if item_id_value != 0:
+        show_item(item_id_value)
+    else:
+        if (test):
+            outfile = open('output_test.json', 'w')
+            wd_json_representation = wdPage.get_wd_json_representation()
+            pprint.pprint(wd_json_representation, outfile)
         else:
-            show_item(return_value, wdpage=wdPage)
+            show_item(item_id_value, wdpage=wdPage)
+
+
 
 def parse_references(reference):
-    ''' Takes the reference element and creates a list of the references
-
+    '''
+    Takes the reference element and creates a list of the references
     '''
     lorefs = []
     length = len(reference)
@@ -158,12 +171,25 @@ def parse_references(reference):
 
 
 def get_data_from_reactome(filename='reactome_data.csv'):
+    '''
+    This function creates a JSON representation of the Reactome data from a precise csv export
+    this emulates the results of the wikipathways query so common code can be used
+
+    The form of the form of the csv file is:
+
+    species,stableId,name,description,[publication;publication;...],None
+
+    '''
+
     f = open(filename, 'r')
     lines = f.readlines()
     f.close()
     pathways = []
     for line in lines:
-        id,label,description,reference,endelement = line.split(',')
+        species,id,label,description,reference,endelement = line.split(',')
+        # only deal with human at present
+        if species != supported_species[current_species]['ReactomeCode']:
+            continue
         lorefs = parse_references(reference)
         pathway = dict({'pwId': {'value': id, 'type': 'string'},
                         'pwLabel': {'value': label, 'type': 'string'},
