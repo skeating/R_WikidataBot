@@ -46,8 +46,9 @@ def main(args):
     for result in  results["results"]["bindings"]:
         index = index + 1
         testfile = 'output_test_item{0}.json'.format(index)
-        create_or_update_item(None, result, 1, prep)
-        fail += compare_files(testfile, 'output_test.json', [], [])
+        written = create_or_update_item(None, result, 1, prep)
+        if written:
+            fail += compare_files(testfile, 'output_test.json', [], [])
     print('Num fails: {0}'.format(fail))
 
 if __name__ == '__main__':

@@ -135,9 +135,13 @@ def create_or_update_items(logincreds, results, test=0):
         return
     prep = dict()
     for result in results["results"]["bindings"]:
+        if result['pwLabel']['value'] == '':
+            continue
         create_or_update_item(logincreds, result, test, prep)
 
 def create_or_update_item(logincreds, result, test, prep):
+    if result['pwLabel']['value'] == '':
+            return False
     reference = create_reference(result)
     match_url = "http://identifiers.org/reactome/REACTOME:"+result["pwId"]["value"]
     print('Creating/updating pathway: ' + result["pwId"]["value"])
@@ -182,6 +186,7 @@ def create_or_update_item(logincreds, result, test, prep):
             pprint.pprint(wd_json_representation, outfile)
         else:
             show_item(item_id_value, wdpage=wdPage)
+    return True
 
 
 

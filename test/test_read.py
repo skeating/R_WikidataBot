@@ -33,7 +33,7 @@ def do_test(testname, results):
     elif testname == 'test_bindings_present':
         result = fail_unless('bindings' in results['results'])
     elif testname == 'test_two_results':
-        result = fail_unless_equal(len(results['results']['bindings']), 2)
+        result = fail_unless_equal(len(results['results']['bindings']), 3)
     elif testname == 'test_result_1_id':
         result1 = results['results']['bindings'][0]
         result = fail_unless_equal(result1['pwId']['value'], 'R-HSA-5659996')
