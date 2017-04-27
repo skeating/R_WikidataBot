@@ -59,3 +59,4 @@ target/
 #mine
 testOutput/
 .idea/
+test/output_test.json
