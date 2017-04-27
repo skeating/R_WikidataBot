@@ -84,7 +84,7 @@
                                       'snaks-order': ['P248', 'P813']}],
                       'type': 'statement'}]},
  'descriptions': {'en': {'language': 'en',
-                         'value': ' An instance of RPIA deficiency: failed '
+                         'value': 'An instance of RPIA deficiency: failed '
                                   'conversion of R5P to RU5P in Homo '
                                   'Sapiens'}},
  'labels': {'en': {'language': 'en',

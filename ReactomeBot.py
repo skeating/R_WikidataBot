@@ -54,6 +54,30 @@ def create_reference(result):
 
 
 
+def add_go_term(prep, result, reference):
+    ''' Function to add the instance of property for a GO term
+        This looks up the go identifier id in wikidata so that it can create the appropriate link
+    '''
+    goterm = '\"' + result['goTerm']['value'] + '\"'
+    if goterm == '""':
+        return
+
+    query = "SELECT * WHERE { VALUES ?goterm {"
+    query += goterm
+    query += "} ?item wdt:P686 ?goterm .}"
+#    print(query)
+
+    wikidata_sparql.setQuery(query)
+    wikidata_results = wikidata_sparql.query().convert()
+
+    for wikidata_result in wikidata_results["results"]["bindings"]:
+        # P31 = instance of
+        if 'P31' not in prep.keys():
+            prep["P31"] = []
+        prep['P31'].append(wdi_core.WDItemID(value=wikidata_result["item"]["value"].replace("http://www.wikidata.org/entity/", ""), prop_nr='P31',
+                                           references=[copy.deepcopy(reference)]))
+
+
 def add_citations(prep, result, reference):
     ''' Function to add the cites property
         This looks up the pudmed id in wikidata so that it can create the appropriate link
@@ -129,6 +153,7 @@ def create_or_update_item(logincreds, result, test, prep):
 
     # pmid queries happen here
     add_citations(prep, result, reference)
+    add_go_term(prep, result, reference)
     data2add = []
     for key in prep.keys():
         for statement in prep[key]:
@@ -160,7 +185,7 @@ def create_or_update_item(logincreds, result, test, prep):
 
 
 
-def parse_references(reference):
+def parse_literature_references(reference):
     '''
     Takes the reference element and creates a list of the references
     '''
@@ -193,15 +218,16 @@ def get_data_from_reactome(filename='reactome_data.csv'):
     f.close()
     pathways = []
     for line in lines:
-        species,id,label,description,reference,endelement = line.split(',')
+        species,id,label,description,reference,goterm,endelement = line.split(',')
         # only deal with human at present
         if species != supported_species[current_species]['ReactomeCode']:
             continue
-        lorefs = parse_references(reference)
+        lorefs = parse_literature_references(reference)
         pathway = dict({'pwId': {'value': id, 'type': 'string'},
                         'pwLabel': {'value': label, 'type': 'string'},
                         'pwDescription': {'value': description, 'type': 'string'},
-                        'publication': {'value': lorefs, 'type': 'list'}})
+                        'publication': {'value': lorefs, 'type': 'list'},
+                        'goTerm': {'value': goterm, 'type': 'string'}})
         pathways.append(pathway)
     b = dict({'bindings': pathways})
     results = dict({'results': b})
@@ -210,44 +236,9 @@ def get_data_from_reactome(filename='reactome_data.csv'):
 
 def main(args):
     logincreds = wdi_login.WDLogin(user=args[1], pwd=args[2], server=server)
-    results = get_data_from_reactome();
+    results = get_data_from_reactome('test/test_reactome_data.csv');
     create_or_update_items(logincreds, results)
-
-
-# #   id = create_item(logincreds)
-#     id = add_statement(logincreds)
-#     print (id)
-# #     name = 'Citric acid cycle (TCA cycle)'
-# #     id = 'Q28031545'
-# #     domain='pathway'
-# # #    print (id)
-# #
-#     id = 'Q58879'
-#     show_item(id)
-# #     print('\n')
-# #     show_item_by_name(name)
-# #     print('\n')
-# #     show_item(id, domain)
-# #     print('\n')
-# #     show_item_by_name(name, domain)
 
 if __name__ == '__main__':
     main(sys.argv)
-
-## just to keep it around
-#adds teh statements to existing item Q59496
-# note it overwrites any existing statements with same property
-def add_statement(logincreds, prep):
-    prep["31"] = [wdi_core.WDUrl(value='https://www.another.xyz', prop_nr='P31')]
-    prep["29943"] = [wdi_core.WDItemID(value='Q59494', prop_nr='P29943')]
-    data2add = []
-    for key in prep.keys():
-        for statement in prep[key]:
-            data2add.append(statement)
-            print(statement.prop_nr, statement.value)
-    wdPage = wdi_core.WDItemEngine(wd_item_id='Q59496', server=server)
-    wdPage.update(data2add)
-    return wdPage.write(login=logincreds, edit_summary='adding label/description')
-
-
 

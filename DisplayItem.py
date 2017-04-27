@@ -4,6 +4,10 @@ from wikidataintegrator import wdi_core
 
 
 class DisplayItem():
+    '''
+    Class to display the content of the resulting Wikidata page
+    takes the json representation and resolves links etc
+    '''
     def __init__(self, wd_json_dict, server):
         self.item = wd_json_dict
         self.server = server

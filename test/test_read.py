@@ -42,7 +42,7 @@ def do_test(testname, results):
         result = fail_unless_equal(result1['pwLabel']['value'], 'RPIA deficiency: failed conversion of R5P to RU5P')
     elif testname == 'test_result_1_desc':
         result1 = results['results']['bindings'][0]
-        result = fail_unless_equal(result1['pwDescription']['value'], ' An instance of RPIA deficiency: failed conversion of R5P to RU5P in Homo Sapiens')
+        result = fail_unless_equal(result1['pwDescription']['value'], 'An instance of RPIA deficiency: failed conversion of R5P to RU5P in Homo Sapiens')
     elif testname == 'test_result_1_publication':
         result1 = results['results']['bindings'][0]
         result = fail_unless_equal(result1['publication']['value'][0], 'http://identifiers.org/pubmed/18987987')
@@ -58,6 +58,12 @@ def do_test(testname, results):
     elif testname == 'test_result_2_publication_num':
         result1 = results['results']['bindings'][1]
         result = fail_unless_equal(len(result1['publication']['value']), 2)
+    elif testname == 'test_result_1_go':
+        result1 = results['results']['bindings'][0]
+        result = fail_unless_equal(result1['goTerm']['value'], '')
+    elif testname == 'test_result_2_go':
+        result1 = results['results']['bindings'][1]
+        result = fail_unless_equal(result1['goTerm']['value'], 'GO:0006281')
     return result
 
 
@@ -67,7 +73,7 @@ def main(args):
     testnames = ['test_length_results', 'test_result_present', 'test_bindings_present', 'test_two_results',
                  'test_result_1_id', 'test_result_1_label', 'test_result_1_desc', 'test_result_1_publication',
                  'test_result_2_publication', 'test_result_1_publication_num', 'test_result_2_publication2',
-                 'test_result_2_publication_num']
+                 'test_result_2_publication_num', 'test_result_1_go', 'test_result_2_go']
     test = 0
     fail = 0
     for onetest in testnames:
