@@ -7,12 +7,16 @@ import sys
 import pprint
 from time import gmtime, strftime
 import copy
+from SPARQLWrapper import SPARQLWrapper, JSON
 
 
 
 # test getting data
 #server='test.wikidata.org'
 server='www.wikidata.org'
+
+# Stating SPARQL endpoints
+wikidata_sparql = SPARQLWrapper("https://query.wikidata.org/bigdata/namespace/wdq/sparql")
 
 
 def create_reference(result):
@@ -40,6 +44,43 @@ def show_item(id, domain=None, wdpage=None):
         wdpage = wdi_core.WDItemEngine(wd_item_id=id, server=server, domain=domain)
     d = DisplayItem.DisplayItem(wdpage.get_wd_json_representation(), server)
     d.show_item()
+
+def add_citations(prep, result, reference):
+    print('add citations')
+    # query = """
+    # PREFIX wp:    <http://vocabularies.wikipathways.org/wp#>
+    # PREFIX dcterms: <http://purl.org/dc/terms/>
+    # select *
+    #
+    # WHERE {
+    # ?pubmed  a       wp:PublicationReference ;
+    #         dcterms:isPartOf <"""
+    #
+    # query+= result["pathway"]["value"]
+    # query += """> .}
+    #
+    # """
+    # wikipathways_sparql.setQuery(query)
+    # pubmed_results = wikipathways_sparql.query().convert()
+    # pubmed_citations = []
+    # for pubmed_result in pubmed_results["results"]["bindings"]:
+    #     pubmed_citations.append("\""+pubmed_result["pubmed"]["value"].replace("http://identifiers.org/pubmed/", "")+"\"")
+    #
+    query = "SELECT * WHERE { VALUES ?pmid {"
+    query += " ".join(result['publication']['value'])
+    query += "} ?item wdt:P698 ?pmid .}"
+    # print(query)
+    wikidata_sparql.setQuery(query)
+    wikidata_results = wikidata_sparql.query().convert()
+    for wikidata_result in wikidata_results["results"]["bindings"]:
+        # P2860 = cites
+        if 'P2860' not in prep.keys():
+            prep["P2860"] = []
+        prep['P2860'].append(wdi_core.WDItemID(value=wikidata_result["item"]["value"].replace("http://www.wikidata.org/entity/", ""), prop_nr='P2860',
+                                           references=[copy.deepcopy(reference)]))
+
+
+
 
 def create_or_update_items(logincreds, results):
     """ this function takes the results dictionary from Reactome;
@@ -79,7 +120,7 @@ def create_or_update_items(logincreds, results):
         # P703 = found in taxon, Q15978631 = "Homo sapiens"
         prep["P703"] = [wdi_core.WDItemID(value="Q15978631", prop_nr='P703', references=[copy.deepcopy(reference)])]
 
-
+#        add_citations(prep, result, reference)
         ## commented out the pmid queries for now
         # query = """
         # PREFIX wp:    <http://vocabularies.wikipathways.org/wp#>
@@ -139,29 +180,18 @@ def create_or_update_items(logincreds, results):
             show_item(return_value, wdpage=wdPage)
 
 
-def get_data_from_reactome():
-    f = open('reactome_data.csv', 'r')
+def get_data_from_reactome(filename='reactome_data.csv'):
+    f = open(filename, 'r')
     lines = f.readlines()
     f.close()
     pathways = []
     for line in lines:
-        id,label,description = line.split(',')
+        id,label,description,reference = line.split(',')
         pathway = dict({'pwId': {'value': id, 'type': 'string'},
                         'pwLabel': {'value': label, 'type': 'string'},
-                        'pwDescription': {'value': description, 'type': 'string'}})
+                        'pwDescription': {'value': description, 'type': 'string'},
+                        'publication': {'value': reference, 'type': 'string'}})
         pathways.append(pathway)
-    p = [
-        {"pwId": { "value": 'R-HSA-val1', 'type': 'string'},
-          "pwLabel": { "value": 'label 1', 'type': 'string'},
- #         'pathway': { "value": 'pathway1', 'type': 'string'},
-          'pwDescription': { "value": 'This is pathway1', 'type': 'string'}
-        },
-        {"pwId": { "value": 'R-HSA-val2', 'type': 'string'},
-          "pwLabel": { "value": 'label 2', 'type': 'string'},
- #         'pathway': { "value": 'pathway2', 'type': 'string'},
-          'pwDescription': { "value": 'This is pathway2', 'type': 'string'}
-        }
-    ]
     b = dict({'bindings': pathways})
     results = dict({'results': b})
     return results
