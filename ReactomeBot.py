@@ -107,6 +107,8 @@ def create_or_update_items(logincreds, results, test=0):
     the section adding the citations has been changed to use a separate function add_citations
 
     """
+    if results is None:
+        return
     prep = dict()
     for result in results["results"]["bindings"]:
         create_or_update_item(logincreds, result, test, prep)
@@ -175,11 +177,16 @@ def get_data_from_reactome(filename='reactome_data.csv'):
     This function creates a JSON representation of the Reactome data from a precise csv export
     this emulates the results of the wikipathways query so common code can be used
 
+    If a filename is not given it will look for the default file
+
     The form of the form of the csv file is:
 
     species,stableId,name,description,[publication;publication;...],None
 
     '''
+    if not os.path.isfile(filename):
+        print('{0} not found aborting ...'.format(filename))
+        return None;
 
     f = open(filename, 'r')
     lines = f.readlines()
@@ -203,7 +210,7 @@ def get_data_from_reactome(filename='reactome_data.csv'):
 
 def main(args):
     logincreds = wdi_login.WDLogin(user=args[1], pwd=args[2], server=server)
-    results = get_data_from_reactome('test_reactome_data.csv');
+    results = get_data_from_reactome();
     create_or_update_items(logincreds, results)
 
 
