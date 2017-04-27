@@ -17,6 +17,19 @@ server='www.wikidata.org'
 
 # Stating SPARQL endpoints
 wikidata_sparql = SPARQLWrapper("https://query.wikidata.org/bigdata/namespace/wdq/sparql")
+wikidata_sparql.setReturnFormat(JSON)
+
+
+def show_item(id, domain=None, wdpage=None):
+    '''
+        My helper function to display the item information
+        This merely parses the json output but I found it easier
+    '''
+    if not wdpage:
+        print('Item found by id: {0} domain {1}'.format(id, domain))
+        wdpage = wdi_core.WDItemEngine(wd_item_id=id, server=server, domain=domain)
+    d = DisplayItem.DisplayItem(wdpage.get_wd_json_representation(), server)
+    d.show_item()
 
 
 def create_reference(result):
@@ -38,48 +51,35 @@ def create_reference(result):
 
 
 
-def show_item(id, domain=None, wdpage=None):
-    if not wdpage:
-        print('Item found by id: {0} domain {1}'.format(id, domain))
-        wdpage = wdi_core.WDItemEngine(wd_item_id=id, server=server, domain=domain)
-    d = DisplayItem.DisplayItem(wdpage.get_wd_json_representation(), server)
-    d.show_item()
-
 def add_citations(prep, result, reference):
-    print('add citations')
-    # query = """
-    # PREFIX wp:    <http://vocabularies.wikipathways.org/wp#>
-    # PREFIX dcterms: <http://purl.org/dc/terms/>
-    # select *
-    #
-    # WHERE {
-    # ?pubmed  a       wp:PublicationReference ;
-    #         dcterms:isPartOf <"""
-    #
-    # query+= result["pathway"]["value"]
-    # query += """> .}
-    #
-    # """
-    # wikipathways_sparql.setQuery(query)
-    # pubmed_results = wikipathways_sparql.query().convert()
-    # pubmed_citations = []
-    # for pubmed_result in pubmed_results["results"]["bindings"]:
-    #     pubmed_citations.append("\""+pubmed_result["pubmed"]["value"].replace("http://identifiers.org/pubmed/", "")+"\"")
-    #
+    ''' Function to add the cites property
+        This looks up the pudmed id in wikidata so that it can create the appropriate link
+
+        This is copied from lines 170 - 188 of PathwayBot.py as of Mar 13
+
+        EXCEPT
+
+        the query to wikipathways is removed; the appropriate PubMed Id link is supplied
+        by the reactome export
+    '''
+    pubmed_citations = []
+    for citation in result['publication']['value']:
+        pubmed_citations.append("\""+citation.replace("http://identifiers.org/pubmed/", "")+"\"")
+
     query = "SELECT * WHERE { VALUES ?pmid {"
-    query += " ".join(result['publication']['value'])
+    query += " ".join(pubmed_citations)
     query += "} ?item wdt:P698 ?pmid .}"
-    # print(query)
+#    print(query)
+
     wikidata_sparql.setQuery(query)
     wikidata_results = wikidata_sparql.query().convert()
+
     for wikidata_result in wikidata_results["results"]["bindings"]:
         # P2860 = cites
         if 'P2860' not in prep.keys():
             prep["P2860"] = []
         prep['P2860'].append(wdi_core.WDItemID(value=wikidata_result["item"]["value"].replace("http://www.wikidata.org/entity/", ""), prop_nr='P2860',
                                            references=[copy.deepcopy(reference)]))
-
-
 
 
 def create_or_update_items(logincreds, results):
@@ -101,10 +101,9 @@ def create_or_update_items(logincreds, results):
 
     No URL added
 
-    the section adding the citations has been changed to no longer query wikipathways
+    the section adding the citations has been changed to use a separate function add_citations
 
     """
-
     prep = dict()
     for result in results["results"]["bindings"]:
         reference = create_reference(result)
@@ -120,41 +119,8 @@ def create_or_update_items(logincreds, results):
         # P703 = found in taxon, Q15978631 = "Homo sapiens"
         prep["P703"] = [wdi_core.WDItemID(value="Q15978631", prop_nr='P703', references=[copy.deepcopy(reference)])]
 
-#        add_citations(prep, result, reference)
-        ## commented out the pmid queries for now
-        # query = """
-        # PREFIX wp:    <http://vocabularies.wikipathways.org/wp#>
-        # PREFIX dcterms: <http://purl.org/dc/terms/>
-        # select *
-        #
-        # WHERE {
-        # ?pubmed  a       wp:PublicationReference ;
-        #         dcterms:isPartOf <"""
-        #
-        # query+= result["pathway"]["value"]
-        # query += """> .}
-        #
-        # """
-        # wikipathways_sparql.setQuery(query)
-        # pubmed_results = wikipathways_sparql.query().convert()
-        # pubmed_citations = []
-        # for pubmed_result in pubmed_results["results"]["bindings"]:
-        #     pubmed_citations.append("\""+pubmed_result["pubmed"]["value"].replace("http://identifiers.org/pubmed/", "")+"\"")
-        #
-        # query = "SELECT * WHERE { VALUES ?pmid {"
-        # query += " ".join(pubmed_citations)
-        # query += "} ?item wdt:P698 ?pmid .}"
-        # # print(query)
-        # wikidata_sparql.setQuery(query)
-        # wikidata_results = wikidata_sparql.query().convert()
-        # for wikidata_result in wikidata_results["results"]["bindings"]:
-        #     # P2860 = cites
-        #     if 'P2860' not in prep.keys():
-        #         prep["P2860"] = []
-        #     prep['P2860'].append(wdi_core.WDItemID(value=wikidata_result["item"]["value"].replace("http://www.wikidata.org/entity/", ""), prop_nr='P2860',
-        #                                        references=[copy.deepcopy(wikipathways_reference)]))
-
- #       pprint.pprint(prep)
+        # pmid queries happen here
+        add_citations(prep, result, reference)
         data2add = []
         for key in prep.keys():
             for statement in prep[key]:
@@ -179,6 +145,17 @@ def create_or_update_items(logincreds, results):
         else:
             show_item(return_value, wdpage=wdPage)
 
+def parse_references(reference):
+    ''' Takes the reference element and creates a list of the references
+
+    '''
+    lorefs = []
+    length = len(reference)
+    if reference.startswith('[') and reference.endswith(']'):
+        modified_ref = reference[1:length-1]
+    return modified_ref.split(';')
+
+
 
 def get_data_from_reactome(filename='reactome_data.csv'):
     f = open(filename, 'r')
@@ -186,11 +163,12 @@ def get_data_from_reactome(filename='reactome_data.csv'):
     f.close()
     pathways = []
     for line in lines:
-        id,label,description,reference = line.split(',')
+        id,label,description,reference,endelement = line.split(',')
+        lorefs = parse_references(reference)
         pathway = dict({'pwId': {'value': id, 'type': 'string'},
                         'pwLabel': {'value': label, 'type': 'string'},
                         'pwDescription': {'value': description, 'type': 'string'},
-                        'publication': {'value': reference, 'type': 'string'}})
+                        'publication': {'value': lorefs, 'type': 'list'}})
         pathways.append(pathway)
     b = dict({'bindings': pathways})
     results = dict({'results': b})
@@ -199,7 +177,7 @@ def get_data_from_reactome(filename='reactome_data.csv'):
 
 def main(args):
     logincreds = wdi_login.WDLogin(user=args[1], pwd=args[2], server=server)
-    results = get_data_from_reactome();
+    results = get_data_from_reactome('test_reactome_data.csv');
     create_or_update_items(logincreds, results)
 
 

@@ -45,7 +45,19 @@ def do_test(testname, results):
         result = fail_unless_equal(result1['pwDescription']['value'], ' An instance of RPIA deficiency: failed conversion of R5P to RU5P in Homo Sapiens')
     elif testname == 'test_result_1_publication':
         result1 = results['results']['bindings'][0]
-        result = fail_unless_equal(result1['publication']['value'], 'http://identifiers.org/pubmed/18987987\n')
+        result = fail_unless_equal(result1['publication']['value'][0], 'http://identifiers.org/pubmed/18987987')
+    elif testname == 'test_result_2_publication':
+        result1 = results['results']['bindings'][1]
+        result = fail_unless_equal(result1['publication']['value'][0], 'http://identifiers.org/pubmed/10583946')
+    elif testname == 'test_result_2_publication2':
+        result1 = results['results']['bindings'][1]
+        result = fail_unless_equal(result1['publication']['value'][1], 'http://identifiers.org/pubmed/1633791')
+    elif testname == 'test_result_1_publication_num':
+        result1 = results['results']['bindings'][0]
+        result = fail_unless_equal(len(result1['publication']['value']), 1)
+    elif testname == 'test_result_2_publication_num':
+        result1 = results['results']['bindings'][1]
+        result = fail_unless_equal(len(result1['publication']['value']), 2)
     return result
 
 
@@ -53,7 +65,9 @@ def main(args):
     filename='test_reactome_data.csv'
     results = get_data_from_reactome(filename)
     testnames = ['test_length_results', 'test_result_present', 'test_bindings_present', 'test_two_results',
-                 'test_result_1_id', 'test_result_1_label', 'test_result_1_desc', 'test_result_1_publication']
+                 'test_result_1_id', 'test_result_1_label', 'test_result_1_desc', 'test_result_1_publication',
+                 'test_result_2_publication', 'test_result_1_publication_num', 'test_result_2_publication2',
+                 'test_result_2_publication_num']
     test = 0
     fail = 0
     for onetest in testnames:
