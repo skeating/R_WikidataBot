@@ -186,6 +186,7 @@ def create_or_update_item(logincreds, result, test, prep):
             pprint.pprint(wd_json_representation, outfile)
         else:
             show_item(item_id_value, wdpage=wdPage)
+            print('\n')
     return True
 
 
@@ -211,7 +212,7 @@ def get_data_from_reactome(filename='reactome_data.csv'):
 
     The form of the form of the csv file is:
 
-    species,stableId,name,description,[publication;publication;...],None
+    species,stableId,name,description,[publication;publication;...],goterm,None
 
     '''
     if not os.path.isfile(filename):
@@ -240,8 +241,21 @@ def get_data_from_reactome(filename='reactome_data.csv'):
 
 
 def main(args):
+    """Usage: ReactomeBot  WDusername, WDpassword (input-filename)
+       This program take the input-filename or use test/test_reactome_data.csv
+       if none given and write the wikidata pages
+       NOTE: At present if will only actually write pages to test,
+       lines 177/8 need to change to allow a write
+    """
+    filename = 'test/test_reactome_data.csv'
+    if len(args) < 3 or len(args) > 4:
+        print(main.__doc__)
+        sys.exit()
+    elif len(args) == 4:
+        filename = args[3]
+
     logincreds = wdi_login.WDLogin(user=args[1], pwd=args[2], server=server)
-    results = get_data_from_reactome('test/test_reactome_data.csv');
+    results = get_data_from_reactome(filename);
     create_or_update_items(logincreds, results)
 
 if __name__ == '__main__':
