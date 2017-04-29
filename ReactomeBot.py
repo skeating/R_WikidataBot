@@ -10,13 +10,15 @@ import copy
 from SPARQLWrapper import SPARQLWrapper, JSON
 
 
+writing_to_WD = False
 
 # test getting data
 #server='test.wikidata.org'
 server='www.wikidata.org'
 
+
 supported_species = [dict({'ReactomeCode': 'HSA', 'name': 'Homo sapiens', 'WDItem': 'Q15978631'})]
-current_species = 0 # index of species
+current_species = 0  # index of species
 
 # Stating SPARQL endpoints
 wikidata_sparql = SPARQLWrapper("https://query.wikidata.org/bigdata/namespace/wdq/sparql")
@@ -133,8 +135,8 @@ def create_or_update_items(logincreds, results, test=0):
     """
     if results is None:
         return
-    prep = dict()
     for result in results["results"]["bindings"]:
+        prep = dict()
         if result['pwLabel']['value'] == '':
             continue
         create_or_update_item(logincreds, result, test, prep)
@@ -173,21 +175,28 @@ def create_or_update_item(logincreds, result, test, prep):
 #        wd_json_representation = wdPage.get_wd_json_representation()
 #        pprint.pprint(wd_json_representation)
 
-    item_id_value = 0
-    if (server == 'test.wikidata.org'):
-       item_id_value = wdPage.write(logincreds)
+    if (writing_to_WD):
+        item_id_value = wdPage.write(logincreds)
 
-    if item_id_value != 0:
-        show_item(item_id_value)
-    else:
-        if (test):
-            outfile = open('output_test.json', 'w')
-            wd_json_representation = wdPage.get_wd_json_representation()
-            pprint.pprint(wd_json_representation, outfile)
-        else:
-            show_item(item_id_value, wdpage=wdPage)
+        if item_id_value != 0:
+            print(item_id_value)
+            show_item(item_id_value)
             print('\n')
-    return True
+    else:
+        item_id_value = 0
+        if (server == 'test.wikidata.org'):
+           item_id_value = wdPage.write(logincreds)
+
+        if item_id_value != 0:
+            show_item(item_id_value)
+        else:
+            if (test):
+                outfile = open('output_test.json', 'w')
+                wd_json_representation = wdPage.get_wd_json_representation()
+                pprint.pprint(wd_json_representation, outfile)
+            else:
+                show_item(item_id_value, wdpage=wdPage)
+                print('\n')
 
 
 
