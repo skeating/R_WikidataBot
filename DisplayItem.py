@@ -111,5 +111,8 @@ class DisplayItem():
         mfw = wdi_core.WDItemEngine(wd_item_id=str_value, server=self.server, search_only=True)
         mfw_d = mfw.get_wd_json_representation()
         desc = mfw_d['labels']
-        en_desc = desc['en']
-        return en_desc['value']
+        if 'en' in desc:
+            en_desc = desc['en']
+            return en_desc['value']
+        else:
+            return 'No English label'

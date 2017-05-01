@@ -45,7 +45,7 @@ def create_reference(result):
     refStatedIn = wdi_core.WDItemID(value="Q2134522", prop_nr='P248', is_reference=True)
     timeStringNow = strftime("+%Y-%m-%dT00:00:00Z", gmtime())
     refRetrieved = wdi_core.WDTime(timeStringNow, prop_nr='P813', is_reference=True)
-    # will need to add the Reactome ID reference which will be specific to the item
+     # will need to add the Reactome ID reference which will be specific to the item
     refReactome = None
 #    refReactome = wdi_core.WDString(result['pwId']['value'], prop_nr='PXXXX', is_reference=True)
     if refReactome is None:
@@ -188,6 +188,7 @@ def create_or_update_item(logincreds, result, test, prep):
            item_id_value = wdPage.write(logincreds)
 
         if item_id_value != 0:
+            print(item_id_value)
             show_item(item_id_value)
         else:
             if (test):
