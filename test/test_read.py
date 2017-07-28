@@ -33,7 +33,7 @@ def do_test(testname, results):
     elif testname == 'test_bindings_present':
         result = fail_unless('bindings' in results['results'])
     elif testname == 'test_two_results':
-        result = fail_unless_equal(len(results['results']['bindings']), 3)
+        result = fail_unless_equal(len(results['results']['bindings']), 2)
     elif testname == 'test_result_1_id':
         result1 = results['results']['bindings'][0]
         result = fail_unless_equal(result1['pwId']['value'], 'R-HSA-5659996')
@@ -42,7 +42,7 @@ def do_test(testname, results):
         result = fail_unless_equal(result1['pwLabel']['value'], 'RPIA deficiency: failed conversion of R5P to RU5P')
     elif testname == 'test_result_1_desc':
         result1 = results['results']['bindings'][0]
-        result = fail_unless_equal(result1['pwDescription']['value'], 'An instance of RPIA deficiency: failed conversion of R5P to RU5P in Homo Sapiens')
+        result = fail_unless_equal(result1['pwDescription']['value'], 'An instance of RPIA deficiency: failed conversion of R5P to RU5P in Homo sapiens')
     elif testname == 'test_result_1_publication':
         result1 = results['results']['bindings'][0]
         result = fail_unless_equal(result1['publication']['value'][0], 'http://identifiers.org/pubmed/18987987')

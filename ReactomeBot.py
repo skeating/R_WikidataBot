@@ -9,8 +9,12 @@ from time import gmtime, strftime
 import copy
 from SPARQLWrapper import SPARQLWrapper, JSON
 
-
+# global variables that need to be set/changed
+# are we actually writing to wikidata
 writing_to_WD = False
+# do we use a date to show when retrieved or the Reactome version number
+use_date_ref = True
+version_no = 61
 
 # test getting data
 #server='test.wikidata.org'
@@ -43,11 +47,12 @@ def create_reference(result):
     tailored for Reactome
     """
     refStatedIn = wdi_core.WDItemID(value="Q2134522", prop_nr='P248', is_reference=True)
-    timeStringNow = strftime("+%Y-%m-%dT00:00:00Z", gmtime())
-    refRetrieved = wdi_core.WDTime(timeStringNow, prop_nr='P813', is_reference=True)
-     # will need to add the Reactome ID reference which will be specific to the item
-    refReactome = None
-#    refReactome = wdi_core.WDString(result['pwId']['value'], prop_nr='PXXXX', is_reference=True)
+    timeStringNow = strftime("+%Y-%m-%dT%H:%M:%SZ", gmtime())
+    if use_date_ref:
+        refRetrieved = wdi_core.WDTime(timeStringNow, prop_nr='P813', is_reference=True)
+    else:
+        refRetrieved = wdi_core.WDString('Version {0}'.format(version_no), prop_nr='P813', is_reference=True)
+    refReactome = wdi_core.WDString(result['pwId']['value'], prop_nr='P3937', is_reference=True)
     if refReactome is None:
         reference = [refStatedIn, refRetrieved]
     else:
@@ -142,20 +147,30 @@ def create_or_update_items(logincreds, results, test=0):
         create_or_update_item(logincreds, result, test, prep)
 
 def create_or_update_item(logincreds, result, test, prep):
+    if test:
+        global writing_to_WD
+        writing_to_WD = False
+        global use_date_ref
+        use_date_ref= False
+        global version_no
+        version_no = 59
     if result['pwLabel']['value'] == '':
             return False
     reference = create_reference(result)
-    match_url = "http://identifiers.org/reactome/REACTOME:"+result["pwId"]["value"]
+    match_url = "http://identifiers.org/reactome:"+result["pwId"]["value"]
     print('Creating/updating pathway: ' + result["pwId"]["value"])
 
     # P31 = instance of pathway
-    prep["P31"] = [wdi_core.WDItemID(value="Q28864279",prop_nr="P31", references=[copy.deepcopy(reference)])]
+    prep["P31"] = [wdi_core.WDItemID(value="Q4915012",prop_nr="P31", references=[copy.deepcopy(reference)])]
 
     # P2888 = exact match
     prep["P2888"] = [wdi_core.WDUrl(match_url, prop_nr='P2888', references=[copy.deepcopy(reference)])]
 
     # P703 = found in taxon
     prep["P703"] = [wdi_core.WDItemID(value=supported_species[current_species]['WDItem'], prop_nr='P703', references=[copy.deepcopy(reference)])]
+
+    # P3937 = Reactome ID
+    prep["P3937"] = [wdi_core.WDString(value=result["pwId"]["value"], prop_nr='P3937')]
 
     # pmid queries happen here
     add_citations(prep, result, reference)
@@ -172,8 +187,8 @@ def create_or_update_item(logincreds, result, test, prep):
     wdPage.set_label(result["pwLabel"]["value"])
     wdPage.set_description (result['pwDescription']['value'])
 
-#        wd_json_representation = wdPage.get_wd_json_representation()
-#        pprint.pprint(wd_json_representation)
+    # wd_json_representation = wdPage.get_wd_json_representation()
+    # pprint.pprint(wd_json_representation)
 
     if (writing_to_WD):
         item_id_value = wdPage.write(logincreds)
@@ -195,6 +210,7 @@ def create_or_update_item(logincreds, result, test, prep):
                 outfile = open('output_test.json', 'w')
                 wd_json_representation = wdPage.get_wd_json_representation()
                 pprint.pprint(wd_json_representation, outfile)
+                return True
             else:
                 show_item(item_id_value, wdpage=wdPage)
                 print('\n')
@@ -250,12 +266,30 @@ def get_data_from_reactome(filename='reactome_data.csv'):
     return results
 
 
+def check_settings(uname):
+    print('Current settings are:')
+    print('Writing to wikidata: {0}'.format('True' if writing_to_WD else 'False'))
+    print('Reactome version: {0}'.format(version_no))
+    print('Use date retrieved: {0}'.format('True' if use_date_ref else 'False'))
+    if uname == 'SarahKeating':
+        print('Using skeating account')
+    else:
+        print('Using bot account')
+    var = input('Proceed (Y):')
+    if var == 'Y':
+        return True
+    else:
+        return False
+
+
+
+
 def main(args):
     """Usage: ReactomeBot  WDusername, WDpassword (input-filename)
        This program take the input-filename or use test/test_reactome_data.csv
        if none given and write the wikidata pages
        NOTE: At present if will only actually write pages to test,
-       lines 177/8 need to change to allow a write
+       the global variable writing_to_WD needs to set true
     """
     filename = 'test/test_reactome_data.csv'
     if len(args) < 3 or len(args) > 4:
@@ -264,9 +298,23 @@ def main(args):
     elif len(args) == 4:
         filename = args[3]
 
-    logincreds = wdi_login.WDLogin(user=args[1], pwd=args[2], server=server)
-    results = get_data_from_reactome(filename);
-    create_or_update_items(logincreds, results)
+    if check_settings(args[1]):
+        try:
+            logincreds = wdi_login.WDLogin(user=args[1], pwd=args[2], server=server)
+        except Exception as e:
+            print('Error logging in: {0}'.format(e.args[0]))
+            sys.exit()
+
+        results = get_data_from_reactome(filename)
+        if not results:
+            sys.exit()
+        try:
+            create_or_update_items(logincreds, results)
+        except Exception as e:
+            print('Error logging in: {0}'.format(e.args[0]))
+            sys.exit()
+
+        print('Upload successfully completed')
 
 if __name__ == '__main__':
     main(sys.argv)

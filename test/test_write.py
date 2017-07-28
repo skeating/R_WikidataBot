@@ -49,6 +49,9 @@ def main(args):
         written = create_or_update_item(None, result, 1, prep)
         if written:
             fail += compare_files(testfile, 'output_test.json', [], [])
+        else:
+            print('Failed to write {0}'.format(result['pwLabel']['value']))
+            fail += 1
     print('Num fails: {0}'.format(fail))
 
 if __name__ == '__main__':
