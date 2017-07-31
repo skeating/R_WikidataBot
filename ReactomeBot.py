@@ -13,7 +13,7 @@ from SPARQLWrapper import SPARQLWrapper, JSON
 # are we actually writing to wikidata
 writing_to_WD = False
 # do we use a date to show when retrieved or the Reactome version number
-use_date_ref = True
+use_date_ref = False
 version_no = 61
 
 # test getting data
@@ -100,6 +100,9 @@ def add_citations(prep, result, reference):
     for citation in result['publication']['value']:
         pubmed_citations.append("\""+citation.replace("http://identifiers.org/pubmed/", "")+"\"")
 
+    if pubmed_citations == []:
+        return
+
     query = "SELECT * WHERE { VALUES ?pmid {"
     query += " ".join(pubmed_citations)
     query += "} ?item wdt:P698 ?pmid .}"
@@ -113,6 +116,60 @@ def add_citations(prep, result, reference):
         if 'P2860' not in prep.keys():
             prep["P2860"] = []
         prep['P2860'].append(wdi_core.WDItemID(value=wikidata_result["item"]["value"].replace("http://www.wikidata.org/entity/", ""), prop_nr='P2860',
+                                           references=[copy.deepcopy(reference)]))
+
+
+def add_part_of(prep, result, reference):
+    ''' Function to add the part of property
+        This looks up the reactome id in wikidata so that it can create the appropriate link
+    '''
+    part_of = []
+    for partof in result['isPartOf']['value']:
+        part_of.append("\""+partof+"\"")
+
+    if part_of == []:
+        return
+
+    query = "SELECT * WHERE { VALUES ?reactomeid {"
+    query += " ".join(part_of)
+    query += "} ?item wdt:P3937 ?reactomeid .}"
+#    print(query)
+
+    wikidata_sparql.setQuery(query)
+    wikidata_results = wikidata_sparql.query().convert()
+
+    for wikidata_result in wikidata_results["results"]["bindings"]:
+        # P361 = part of
+        if 'P361' not in prep.keys():
+            prep["P361"] = []
+        prep['P361'].append(wdi_core.WDItemID(value=wikidata_result["item"]["value"].replace("http://www.wikidata.org/entity/", ""), prop_nr='P361',
+                                           references=[copy.deepcopy(reference)]))
+
+
+def add_haspart(prep, result, reference):
+    ''' Function to add the has part property
+        This looks up the reactome id in wikidata so that it can create the appropriate link
+    '''
+    has_part = []
+    for partof in result['hasPart']['value']:
+        has_part.append("\""+partof+"\"")
+
+    if has_part == []:
+        return
+
+    query = "SELECT * WHERE { VALUES ?reactomeid {"
+    query += " ".join(has_part)
+    query += "} ?item wdt:P3937 ?reactomeid .}"
+#    print(query)
+
+    wikidata_sparql.setQuery(query)
+    wikidata_results = wikidata_sparql.query().convert()
+
+    for wikidata_result in wikidata_results["results"]["bindings"]:
+        # P527 = has part
+        if 'P527' not in prep.keys():
+            prep["P527"] = []
+        prep['P527'].append(wdi_core.WDItemID(value=wikidata_result["item"]["value"].replace("http://www.wikidata.org/entity/", ""), prop_nr='P527',
                                            references=[copy.deepcopy(reference)]))
 
 
@@ -174,6 +231,8 @@ def create_or_update_item(logincreds, result, test, prep):
 
     # pmid queries happen here
     add_citations(prep, result, reference)
+    add_part_of(prep, result, reference)
+    add_haspart(prep, result, reference)
     add_go_term(prep, result, reference)
     data2add = []
     for key in prep.keys():
@@ -217,16 +276,14 @@ def create_or_update_item(logincreds, result, test, prep):
 
 
 
-def parse_literature_references(reference):
+def parse_list_references(reference):
     '''
     Takes the reference element and creates a list of the references
     '''
-    lorefs = []
     length = len(reference)
     if reference.startswith('[') and reference.endswith(']'):
         modified_ref = reference[1:length-1]
     return modified_ref.split(';')
-
 
 
 def get_data_from_reactome(filename='reactome_data.csv'):
@@ -250,16 +307,20 @@ def get_data_from_reactome(filename='reactome_data.csv'):
     f.close()
     pathways = []
     for line in lines:
-        species,id,label,description,reference,goterm,endelement = line.split(',')
+        species,id,label,description,reference,goterm,haspart,ispartof,endelement = line.split(',')
         # only deal with human at present
         if species != supported_species[current_species]['ReactomeCode']:
             continue
-        lorefs = parse_literature_references(reference)
+        lorefs = parse_list_references(reference)
+        lo_haspart = parse_list_references(haspart)
+        lo_ispartof = parse_list_references(ispartof)
         pathway = dict({'pwId': {'value': id, 'type': 'string'},
                         'pwLabel': {'value': label, 'type': 'string'},
                         'pwDescription': {'value': description, 'type': 'string'},
                         'publication': {'value': lorefs, 'type': 'list'},
-                        'goTerm': {'value': goterm, 'type': 'string'}})
+                        'goTerm': {'value': goterm, 'type': 'string'},
+                        'hasPart': {'value': lo_haspart, 'type': 'list'},
+                        'isPartOf': {'value': lo_ispartof, 'type': 'list'}})
         pathways.append(pathway)
     b = dict({'bindings': pathways})
     results = dict({'results': b})
@@ -311,7 +372,7 @@ def main(args):
         try:
             create_or_update_items(logincreds, results)
         except Exception as e:
-            print('Error logging in: {0}'.format(e.args[0]))
+            print('Error writing results: {0}'.format(e.args[0]))
             sys.exit()
 
         print('Upload successfully completed')

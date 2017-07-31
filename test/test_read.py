@@ -64,6 +64,18 @@ def do_test(testname, results):
     elif testname == 'test_result_2_go':
         result1 = results['results']['bindings'][1]
         result = fail_unless_equal(result1['goTerm']['value'], 'GO:0006281')
+    elif testname == 'test_result_1_partof':
+        result1 = results['results']['bindings'][0]
+        result = fail_unless_equal(result1['isPartOf']['value'], '')
+    elif testname == 'test_result_2_partof':
+        result1 = results['results']['bindings'][1]
+        result = fail_unless_equal(result1['isPartOf']['value'], 'R-HSA-5659996')
+    elif testname == 'test_result_1_haspart':
+        result1 = results['results']['bindings'][0]
+        result = fail_unless_equal(result1['hasPart']['value'], 'R-HSA-73894')
+    elif testname == 'test_result_2_haspart':
+        result1 = results['results']['bindings'][1]
+        result = fail_unless_equal(result1['hasPart']['value'], '')
     return result
 
 
@@ -73,7 +85,8 @@ def main(args):
     testnames = ['test_length_results', 'test_result_present', 'test_bindings_present', 'test_two_results',
                  'test_result_1_id', 'test_result_1_label', 'test_result_1_desc', 'test_result_1_publication',
                  'test_result_2_publication', 'test_result_1_publication_num', 'test_result_2_publication2',
-                 'test_result_2_publication_num', 'test_result_1_go', 'test_result_2_go']
+                 'test_result_2_publication_num', 'test_result_1_go', 'test_result_2_go',
+                 'test_result_1_haspart', 'test_result_2_haspart', 'test_result_1_partof', 'test_result_2_partof']
     test = 0
     fail = 0
     for onetest in testnames:
