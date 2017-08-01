@@ -1,6 +1,6 @@
 __author__ = 'Sarah'
 
-from wikidataintegrator import wdi_core, wdi_login
+from wikidataintegrator import wdi_core, wdi_login, wdi_property_store
 import DisplayItem
 import os
 import sys
@@ -13,7 +13,7 @@ from SPARQLWrapper import SPARQLWrapper, JSON
 # are we actually writing to wikidata
 writing_to_WD = False
 # do we use a date to show when retrieved or the Reactome version number
-use_date_ref = False
+use_date_ref = True
 version_no = 61
 
 # test getting data
@@ -28,6 +28,16 @@ current_species = 0  # index of species
 wikidata_sparql = SPARQLWrapper("https://query.wikidata.org/bigdata/namespace/wdq/sparql")
 wikidata_sparql.setReturnFormat(JSON)
 
+fast_run = True
+fast_run_base_filter = dict({'P3937': '', 'P703': 'Q15978631'})
+
+# tell the properties about reactome ID
+wdi_property_store.wd_properties['P3937'] = {
+        'datatype': 'string',
+        'name': 'Reactome Pathway ID',
+        'domain': ['pathways'],
+        'core_id': 'True'
+    }
 
 def show_item(id, domain=None, wdpage=None):
     '''
@@ -47,7 +57,7 @@ def create_reference(result):
     tailored for Reactome
     """
     refStatedIn = wdi_core.WDItemID(value="Q2134522", prop_nr='P248', is_reference=True)
-    timeStringNow = strftime("+%Y-%m-%dT%H:%M:%SZ", gmtime())
+    timeStringNow = strftime("+%Y-%m-%dT00:00:00Z", gmtime())
     if use_date_ref:
         refRetrieved = wdi_core.WDTime(timeStringNow, prop_nr='P813', is_reference=True)
     else:
@@ -239,12 +249,13 @@ def create_or_update_item(logincreds, result, test, prep):
         for statement in prep[key]:
             data2add.append(statement)
 #               print(statement.prop_nr, statement.value)
-    # wdPage = wdi_core.WDItemEngine( item_name=result["pwLabel"]["value"], data=data2add, server="www.wikidata.org", domain="genes", fast_run=fast_run, fast_run_base_filter=fast_run_base_filter)
+#    wdPage = wdi_core.WDItemEngine( item_name=result["pwLabel"]["value"], data=data2add, server="www.wikidata.org",
+#                                    domain="pathway", fast_run=fast_run, fast_run_base_filter=fast_run_base_filter)
     wdPage = wdi_core.WDItemEngine(item_name=result["pwLabel"]["value"], data=data2add, server=server,
                                    domain="pathway")
 
     wdPage.set_label(result["pwLabel"]["value"])
-    wdPage.set_description (result['pwDescription']['value'])
+    wdPage.set_description(result['pwDescription']['value'])
 
     # wd_json_representation = wdPage.get_wd_json_representation()
     # pprint.pprint(wd_json_representation)
@@ -253,9 +264,8 @@ def create_or_update_item(logincreds, result, test, prep):
         item_id_value = wdPage.write(logincreds)
 
         if item_id_value != 0:
-            print(item_id_value)
-            show_item(item_id_value)
-            print('\n')
+            print('https://www.wikidata.org/wiki/{0}'.format(item_id_value))
+#            show_item(item_id_value)
     else:
         item_id_value = 0
         if (server == 'test.wikidata.org'):
@@ -295,7 +305,7 @@ def get_data_from_reactome(filename='reactome_data.csv'):
 
     The form of the form of the csv file is:
 
-    species,stableId,name,description,[publication;publication;...],goterm,None
+    species,stableId,name,description,[publication;publication;...],goterm,[part1;part2],[partof1;partof2],None
 
     '''
     if not os.path.isfile(filename):
@@ -307,21 +317,28 @@ def get_data_from_reactome(filename='reactome_data.csv'):
     f.close()
     pathways = []
     for line in lines:
-        species,id,label,description,reference,goterm,haspart,ispartof,endelement = line.split(',')
-        # only deal with human at present
-        if species != supported_species[current_species]['ReactomeCode']:
-            continue
-        lorefs = parse_list_references(reference)
-        lo_haspart = parse_list_references(haspart)
-        lo_ispartof = parse_list_references(ispartof)
-        pathway = dict({'pwId': {'value': id, 'type': 'string'},
-                        'pwLabel': {'value': label, 'type': 'string'},
-                        'pwDescription': {'value': description, 'type': 'string'},
-                        'publication': {'value': lorefs, 'type': 'list'},
-                        'goTerm': {'value': goterm, 'type': 'string'},
-                        'hasPart': {'value': lo_haspart, 'type': 'list'},
-                        'isPartOf': {'value': lo_ispartof, 'type': 'list'}})
-        pathways.append(pathway)
+        variables = line.split(',')
+        if len(variables) != 9:
+            print('A line in the input csv file expects 9 comma separated entries')
+            print('species,id,label,description,reference,goterm,haspart,ispartof,endelement')
+            print('Re run WikidataExport to create an accurate file')
+            return None
+        else:
+            species,id,label,description,reference,goterm,haspart,ispartof,endelement = line.split(',')
+            # only deal with human at present
+            if species != supported_species[current_species]['ReactomeCode']:
+                continue
+            lorefs = parse_list_references(reference)
+            lo_haspart = parse_list_references(haspart)
+            lo_ispartof = parse_list_references(ispartof)
+            pathway = dict({'pwId': {'value': id, 'type': 'string'},
+                            'pwLabel': {'value': label, 'type': 'string'},
+                            'pwDescription': {'value': description, 'type': 'string'},
+                            'publication': {'value': lorefs, 'type': 'list'},
+                            'goTerm': {'value': goterm, 'type': 'string'},
+                            'hasPart': {'value': lo_haspart, 'type': 'list'},
+                            'isPartOf': {'value': lo_ispartof, 'type': 'list'}})
+            pathways.append(pathway)
     b = dict({'bindings': pathways})
     results = dict({'results': b})
     return results
@@ -362,12 +379,15 @@ def main(args):
     if check_settings(args[1]):
         try:
             logincreds = wdi_login.WDLogin(user=args[1], pwd=args[2], server=server)
+ #           logincreds = wdi_login.WDLogin(user=args[1], server=server)
+
         except Exception as e:
             print('Error logging in: {0}'.format(e.args[0]))
             sys.exit()
 
         results = get_data_from_reactome(filename)
         if not results:
+            print('No wikidata entries made')
             sys.exit()
         try:
             create_or_update_items(logincreds, results)
