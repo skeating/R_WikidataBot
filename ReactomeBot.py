@@ -39,6 +39,10 @@ wdi_property_store.wd_properties['P3937'] = {
         'core_id': 'True'
     }
 
+missing_citations = []
+missing_go_terms = []
+missing_reactome_references = []
+
 def show_item(id, domain=None, wdpage=None):
     '''
         My helper function to display the item information
@@ -61,6 +65,7 @@ def create_reference(result):
     if use_date_ref:
         refRetrieved = wdi_core.WDTime(timeStringNow, prop_nr='P813', is_reference=True)
     else:
+        # cannot do this as P813 expects a date
         refRetrieved = wdi_core.WDString('Version {0}'.format(version_no), prop_nr='P813', is_reference=True)
     refReactome = wdi_core.WDString(result['pwId']['value'], prop_nr='P3937', is_reference=True)
     if refReactome is None:
@@ -84,16 +89,19 @@ def add_go_term(prep, result, reference):
     query += "} ?item wdt:P686 ?goterm .}"
 #    print(query)
 
+    found = False
     wikidata_sparql.setQuery(query)
     wikidata_results = wikidata_sparql.query().convert()
 
     for wikidata_result in wikidata_results["results"]["bindings"]:
+        found = True
         # P31 = instance of
         if 'P31' not in prep.keys():
             prep["P31"] = []
         prep['P31'].append(wdi_core.WDItemID(value=wikidata_result["item"]["value"].replace("http://www.wikidata.org/entity/", ""), prop_nr='P31',
                                            references=[copy.deepcopy(reference)]))
-
+    if not found:
+        missing_go_terms.append(goterm)
 
 def add_citations(prep, result, reference):
     ''' Function to add the cites property
@@ -127,6 +135,9 @@ def add_citations(prep, result, reference):
             prep["P2860"] = []
         prep['P2860'].append(wdi_core.WDItemID(value=wikidata_result["item"]["value"].replace("http://www.wikidata.org/entity/", ""), prop_nr='P2860',
                                            references=[copy.deepcopy(reference)]))
+        pubmed_citations.remove("\"{0}\"".format(wikidata_result['pmid']['value']))
+    for citation in pubmed_citations:
+        missing_citations.append(citation)
 
 
 def add_part_of(prep, result, reference):
@@ -154,6 +165,9 @@ def add_part_of(prep, result, reference):
             prep["P361"] = []
         prep['P361'].append(wdi_core.WDItemID(value=wikidata_result["item"]["value"].replace("http://www.wikidata.org/entity/", ""), prop_nr='P361',
                                            references=[copy.deepcopy(reference)]))
+        part_of.remove("\"{0}\"".format(wikidata_result['reactomeid']['value']))
+    for partof in part_of:
+        missing_reactome_references.append(partof)
 
 
 def add_haspart(prep, result, reference):
@@ -181,6 +195,9 @@ def add_haspart(prep, result, reference):
             prep["P527"] = []
         prep['P527'].append(wdi_core.WDItemID(value=wikidata_result["item"]["value"].replace("http://www.wikidata.org/entity/", ""), prop_nr='P527',
                                            references=[copy.deepcopy(reference)]))
+        has_part.remove("\"{0}\"".format(wikidata_result['reactomeid']['value']))
+    for partof in has_part:
+        missing_reactome_references.append(partof)
 
 
 def create_or_update_items(logincreds, results, test=0):
@@ -281,7 +298,7 @@ def create_or_update_item(logincreds, result, test, prep):
                 pprint.pprint(wd_json_representation, outfile)
                 return True
             else:
-                show_item(item_id_value, wdpage=wdPage)
+#                show_item(item_id_value, wdpage=wdPage)
                 print('\n')
 
 
@@ -296,7 +313,7 @@ def parse_list_references(reference):
     return modified_ref.split(';')
 
 
-def get_data_from_reactome(filename='reactome_data.csv'):
+def get_data_from_reactome(filename):
     '''
     This function creates a JSON representation of the Reactome data from a precise csv export
     this emulates the results of the wikipathways query so common code can be used
@@ -353,12 +370,31 @@ def check_settings(uname):
         print('Using skeating account')
     else:
         print('Using bot account')
-    var = input('Proceed (Y):')
+    if writing_to_WD:
+        var = input('Proceed (Y):')
+    else:
+        var = 'Y'
     if var == 'Y':
         return True
     else:
         return False
 
+def output_report():
+    filename = 'status_time.csv'
+    f = open(filename, 'w')
+    f.write('missing pmids,')
+    for pmid in missing_citations:
+        f.write('{0},'.format(pmid))
+    f.write('\n')
+    f.write('missing go terms,')
+    for term in missing_go_terms:
+        f.write('{0},'.format(term))
+    f.write('\n')
+    f.write('missing reactome,')
+    for id in missing_reactome_references:
+        f.write('{0},'.format(id))
+    f.write('\n')
+    f.close()
 
 
 
@@ -369,7 +405,7 @@ def main(args):
        NOTE: At present if will only actually write pages to test,
        the global variable writing_to_WD needs to set true
     """
-    filename = 'test/test_reactome_data.csv'
+    filename = 'reactome_data.csv'
     if len(args) < 3 or len(args) > 4:
         print(main.__doc__)
         sys.exit()
@@ -377,6 +413,9 @@ def main(args):
         filename = args[3]
 
     if check_settings(args[1]):
+        missing_citations.clear()
+        missing_go_terms.clear()
+        missing_reactome_references.clear()
         try:
             logincreds = wdi_login.WDLogin(user=args[1], pwd=args[2], server=server)
  #           logincreds = wdi_login.WDLogin(user=args[1], server=server)
@@ -396,7 +435,10 @@ def main(args):
             sys.exit()
 
         print('Upload successfully completed')
-
+        print(missing_citations)
+        print(missing_go_terms)
+        print(missing_reactome_references)
+        output_report()
 if __name__ == '__main__':
     main(sys.argv)
 
