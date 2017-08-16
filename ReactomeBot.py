@@ -12,7 +12,11 @@ from SPARQLWrapper import SPARQLWrapper, JSON
 # global variables that need to be set/changed
 # are we actually writing to wikidata
 writing_to_WD = False
+fast_run = True
+
 # do we use a date to show when retrieved or the Reactome version number
+# note a wikidata entry must use date but for testing I use a version number so
+# tests remain static
 use_date_ref = True
 version_no = 61
 
@@ -28,7 +32,6 @@ current_species = 0  # index of species
 wikidata_sparql = SPARQLWrapper("https://query.wikidata.org/bigdata/namespace/wdq/sparql")
 wikidata_sparql.setReturnFormat(JSON)
 
-fast_run = True
 fast_run_base_filter = dict({'P3937': '', 'P703': 'Q15978631'})
 
 # tell the properties about reactome ID
@@ -42,6 +45,7 @@ wdi_property_store.wd_properties['P3937'] = {
 missing_citations = []
 missing_go_terms = []
 missing_reactome_references = []
+edited_wd_pages = []
 
 def show_item(id, domain=None, wdpage=None):
     '''
@@ -135,7 +139,9 @@ def add_citations(prep, result, reference):
             prep["P2860"] = []
         prep['P2860'].append(wdi_core.WDItemID(value=wikidata_result["item"]["value"].replace("http://www.wikidata.org/entity/", ""), prop_nr='P2860',
                                            references=[copy.deepcopy(reference)]))
-        pubmed_citations.remove("\"{0}\"".format(wikidata_result['pmid']['value']))
+        result = "\"{0}\"".format(wikidata_result['pmid']['value'])
+        if result in pubmed_citations:
+            pubmed_citations.remove(result)
     for citation in pubmed_citations:
         missing_citations.append(citation)
 
@@ -165,7 +171,9 @@ def add_part_of(prep, result, reference):
             prep["P361"] = []
         prep['P361'].append(wdi_core.WDItemID(value=wikidata_result["item"]["value"].replace("http://www.wikidata.org/entity/", ""), prop_nr='P361',
                                            references=[copy.deepcopy(reference)]))
-        part_of.remove("\"{0}\"".format(wikidata_result['reactomeid']['value']))
+        result = "\"{0}\"".format(wikidata_result['reactomeid']['value'])
+        if result in part_of:
+            part_of.remove(result)
     for partof in part_of:
         missing_reactome_references.append(partof)
 
@@ -195,7 +203,9 @@ def add_haspart(prep, result, reference):
             prep["P527"] = []
         prep['P527'].append(wdi_core.WDItemID(value=wikidata_result["item"]["value"].replace("http://www.wikidata.org/entity/", ""), prop_nr='P527',
                                            references=[copy.deepcopy(reference)]))
-        has_part.remove("\"{0}\"".format(wikidata_result['reactomeid']['value']))
+        result = "\"{0}\"".format(wikidata_result['reactomeid']['value'])
+        if result in has_part:
+            has_part.remove(result)
     for partof in has_part:
         missing_reactome_references.append(partof)
 
@@ -244,8 +254,11 @@ def create_or_update_item(logincreds, result, test, prep):
     match_url = "http://identifiers.org/reactome:"+result["pwId"]["value"]
     print('Creating/updating pathway: ' + result["pwId"]["value"])
 
-    # P31 = instance of pathway
-    prep["P31"] = [wdi_core.WDItemID(value="Q4915012",prop_nr="P31", references=[copy.deepcopy(reference)])]
+    # P31 = instance of pathway/reaction
+    if result['eventType']['value'] == 'P':
+        prep["P31"] = [wdi_core.WDItemID(value="Q4915012",prop_nr="P31", references=[copy.deepcopy(reference)])]
+    else:
+        prep["P31"] = [wdi_core.WDItemID(value="Q2996394",prop_nr="P31", references=[copy.deepcopy(reference)])]
 
     # P2888 = exact match
     prep["P2888"] = [wdi_core.WDUrl(match_url, prop_nr='P2888', references=[copy.deepcopy(reference)])]
@@ -266,10 +279,10 @@ def create_or_update_item(logincreds, result, test, prep):
         for statement in prep[key]:
             data2add.append(statement)
 #               print(statement.prop_nr, statement.value)
-#    wdPage = wdi_core.WDItemEngine( item_name=result["pwLabel"]["value"], data=data2add, server="www.wikidata.org",
-#                                    domain="pathway", fast_run=fast_run, fast_run_base_filter=fast_run_base_filter)
-    wdPage = wdi_core.WDItemEngine(item_name=result["pwLabel"]["value"], data=data2add, server=server,
-                                   domain="pathway")
+    wdPage = wdi_core.WDItemEngine( item_name=result["pwLabel"]["value"], data=data2add, server=server,
+                                    domain="pathway", fast_run=fast_run, fast_run_base_filter=fast_run_base_filter)
+#    wdPage = wdi_core.WDItemEngine(item_name=result["pwLabel"]["value"], data=data2add, server=server,
+#                                   domain="pathway")
 
     wdPage.set_label(result["pwLabel"]["value"])
     wdPage.set_description(result['pwDescription']['value'])
@@ -281,6 +294,7 @@ def create_or_update_item(logincreds, result, test, prep):
         item_id_value = wdPage.write(logincreds)
 
         if item_id_value != 0:
+            edited_wd_pages.append(item_id_value)
             print('https://www.wikidata.org/wiki/{0}'.format(item_id_value))
 #            show_item(item_id_value)
     else:
@@ -298,6 +312,8 @@ def create_or_update_item(logincreds, result, test, prep):
                 pprint.pprint(wd_json_representation, outfile)
                 return True
             else:
+                edited_wd_pages.append(item_id_value)
+
 #                show_item(item_id_value, wdpage=wdPage)
                 print('\n')
 
@@ -322,7 +338,7 @@ def get_data_from_reactome(filename):
 
     The form of the form of the csv file is:
 
-    species,stableId,name,description,[publication;publication;...],goterm,[part1;part2],[partof1;partof2],None
+    species,stableId,type,name,description,[publication;publication;...],goterm,[part1;part2],[partof1;partof2],None
 
     '''
     if not os.path.isfile(filename):
@@ -335,13 +351,13 @@ def get_data_from_reactome(filename):
     pathways = []
     for line in lines:
         variables = line.split(',')
-        if len(variables) != 9:
-            print('A line in the input csv file expects 9 comma separated entries')
-            print('species,id,label,description,reference,goterm,haspart,ispartof,endelement')
+        if len(variables) != 10:
+            print('A line in the input csv file expects 10 comma separated entries')
+            print('species,id,type,label,description,reference,goterm,haspart,ispartof,endelement')
             print('Re run WikidataExport to create an accurate file')
             return None
         else:
-            species,id,label,description,reference,goterm,haspart,ispartof,endelement = line.split(',')
+            species,id,eventType,label,description,reference,goterm,haspart,ispartof,endelement = line.split(',')
             # only deal with human at present
             if species != supported_species[current_species]['ReactomeCode']:
                 continue
@@ -354,18 +370,21 @@ def get_data_from_reactome(filename):
                             'publication': {'value': lorefs, 'type': 'list'},
                             'goTerm': {'value': goterm, 'type': 'string'},
                             'hasPart': {'value': lo_haspart, 'type': 'list'},
-                            'isPartOf': {'value': lo_ispartof, 'type': 'list'}})
+                            'isPartOf': {'value': lo_ispartof, 'type': 'list'},
+                            'eventType': {'value': eventType, 'type': 'string'}})
             pathways.append(pathway)
     b = dict({'bindings': pathways})
     results = dict({'results': b})
     return results
 
 
-def check_settings(uname):
+def check_settings(uname, filename):
     print('Current settings are:')
     print('Writing to wikidata: {0}'.format('True' if writing_to_WD else 'False'))
+    print('Fast run: {0}'.format('True' if fast_run else 'False'))
     print('Reactome version: {0}'.format(version_no))
     print('Use date retrieved: {0}'.format('True' if use_date_ref else 'False'))
+    print('Using input file: {0}'.format(filename))
     if uname == 'SarahKeating':
         print('Using skeating account')
     else:
@@ -380,7 +399,8 @@ def check_settings(uname):
         return False
 
 def output_report():
-    filename = 'status_time.csv'
+    timeStringNow = gmtime()
+    filename = 'wikidata_update_{0}-{1}-{2}.csv'.format(timeStringNow[0], timeStringNow[1], timeStringNow[2])
     f = open(filename, 'w')
     f.write('missing pmids,')
     for pmid in missing_citations:
@@ -392,6 +412,10 @@ def output_report():
     f.write('\n')
     f.write('missing reactome,')
     for id in missing_reactome_references:
+        f.write('{0},'.format(id))
+    f.write('\n')
+    f.write('wikidata entries,')
+    for id in edited_wd_pages:
         f.write('{0},'.format(id))
     f.write('\n')
     f.close()
@@ -412,7 +436,7 @@ def main(args):
     elif len(args) == 4:
         filename = args[3]
 
-    if check_settings(args[1]):
+    if check_settings(args[1], filename):
         missing_citations.clear()
         missing_go_terms.clear()
         missing_reactome_references.clear()

@@ -66,16 +66,16 @@ def do_test(testname, results):
         result = fail_unless_equal(result1['goTerm']['value'], 'GO:0006281')
     elif testname == 'test_result_1_partof':
         result1 = results['results']['bindings'][0]
-        result = fail_unless_equal(result1['isPartOf']['value'], '')
+        result = fail_unless_equal(result1['isPartOf']['value'][0], '')
     elif testname == 'test_result_2_partof':
         result1 = results['results']['bindings'][1]
-        result = fail_unless_equal(result1['isPartOf']['value'], 'R-HSA-5659996')
+        result = fail_unless_equal(result1['isPartOf']['value'][0], 'R-HSA-196791')
     elif testname == 'test_result_1_haspart':
         result1 = results['results']['bindings'][0]
-        result = fail_unless_equal(result1['hasPart']['value'], 'R-HSA-73894')
+        result = fail_unless_equal(result1['hasPart']['value'][0], 'R-HSA-196791')
     elif testname == 'test_result_2_haspart':
         result1 = results['results']['bindings'][1]
-        result = fail_unless_equal(result1['hasPart']['value'], '')
+        result = fail_unless_equal(result1['hasPart']['value'][0], '')
     return result
 
 

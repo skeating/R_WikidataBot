@@ -1,2 +1,2 @@
-HSA,R-HSA-5659996,RPIA deficiency: failed conversion of R5P to RU5P,An instance of RPIA deficiency: failed conversion of R5P to RU5P in Homo sapiens,[http://identifiers.org/pubmed/18987987],,[R-HSA-196791],[],None
-HSA,R-HSA-73894,DNA Repair,An instance of DNA Repair in Homo Sapiens,[http://identifiers.org/pubmed/10583946;http://identifiers.org/pubmed/1633791],GO:0006281,[],[R-HSA-196791],None
+HSA,R-HSA-5659996,R,RPIA deficiency: failed conversion of R5P to RU5P,An instance of RPIA deficiency: failed conversion of R5P to RU5P in Homo sapiens,[http://identifiers.org/pubmed/18987987],,[R-HSA-196791],[],None
+HSA,R-HSA-73894,P,DNA Repair,An instance of DNA Repair in Homo Sapiens,[http://identifiers.org/pubmed/10583946;http://identifiers.org/pubmed/1633791],GO:0006281,[],[R-HSA-196791],None
