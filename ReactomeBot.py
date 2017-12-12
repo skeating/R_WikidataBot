@@ -11,14 +11,14 @@ from SPARQLWrapper import SPARQLWrapper, JSON
 
 # global variables that need to be set/changed
 # are we actually writing to wikidata
-writing_to_WD = False
+writing_to_WD = True
 fast_run = True
 
 # do we use a date to show when retrieved or the Reactome version number
 # note a wikidata entry must use date but for testing I use a version number so
 # tests remain static
 use_date_ref = True
-version_no = 61
+version_no = 62
 
 # test getting data
 #server='test.wikidata.org'
@@ -39,12 +39,13 @@ wdi_property_store.wd_properties['P3937'] = {
         'datatype': 'string',
         'name': 'Reactome Pathway ID',
         'domain': ['pathways'],
-        'core_id': 'True'
+        'core_id': True
     }
 
 missing_citations = []
 missing_go_terms = []
 missing_reactome_references = []
+missing_uniprot = []
 edited_wd_pages = []
 
 def show_item(id, domain=None, wdpage=None):
@@ -210,6 +211,40 @@ def add_haspart(prep, result, reference):
         missing_reactome_references.append(partof)
 
 
+def add_proteins(prep, result, reference):
+    ''' Function to add the has part property
+        This looks up the uniprot id in wikidata so that it can create the appropriate link
+    '''
+    has_part = []
+    for partof in result['proteins']['value']:
+        part = "\""+partof+"\""
+        if part not in has_part:
+            has_part.append(part)
+
+    if has_part == []:
+        return
+
+    query = "SELECT * WHERE { VALUES ?uniprotid {"
+    query += " ".join(has_part)
+    query += "} ?item wdt:P352 ?uniprotid .}"
+#    print(query)
+
+    wikidata_sparql.setQuery(query)
+    wikidata_results = wikidata_sparql.query().convert()
+
+    for wikidata_result in wikidata_results["results"]["bindings"]:
+        # P527 = has part
+        if 'P527' not in prep.keys():
+            prep["P527"] = []
+        prep['P527'].append(wdi_core.WDItemID(value=wikidata_result["item"]["value"].replace("http://www.wikidata.org/entity/", ""), prop_nr='P527',
+                                           references=[copy.deepcopy(reference)]))
+        result = "\"{0}\"".format(wikidata_result['uniprotid']['value'])
+        if result in has_part:
+            has_part.remove(result)
+    for partof in has_part:
+        missing_reactome_references.append(partof)
+
+
 def create_or_update_items(logincreds, results, test=0):
     """ this function takes the results dictionary from Reactome;
     which hopefully emulates the JSON returned by the wikipathways query;
@@ -264,7 +299,8 @@ def create_or_update_item(logincreds, result, test, prep):
     prep["P2888"] = [wdi_core.WDUrl(match_url, prop_nr='P2888', references=[copy.deepcopy(reference)])]
 
     # P703 = found in taxon
-    prep["P703"] = [wdi_core.WDItemID(value=supported_species[current_species]['WDItem'], prop_nr='P703', references=[copy.deepcopy(reference)])]
+    if writing_to_WD:
+        prep["P703"] = [wdi_core.WDItemID(value=supported_species[current_species]['WDItem'], prop_nr='P703', references=[copy.deepcopy(reference)])]
 
     # P3937 = Reactome ID
     prep["P3937"] = [wdi_core.WDString(value=result["pwId"]["value"], prop_nr='P3937')]
@@ -274,15 +310,16 @@ def create_or_update_item(logincreds, result, test, prep):
     add_part_of(prep, result, reference)
     add_haspart(prep, result, reference)
     add_go_term(prep, result, reference)
+#    add_proteins(prep, result, reference)
     data2add = []
     for key in prep.keys():
         for statement in prep[key]:
             data2add.append(statement)
 #               print(statement.prop_nr, statement.value)
     wdPage = wdi_core.WDItemEngine( item_name=result["pwLabel"]["value"], data=data2add, server=server,
-                                    domain="pathway", fast_run=fast_run, fast_run_base_filter=fast_run_base_filter)
+                                     domain="pathway", fast_run=fast_run, fast_run_base_filter=fast_run_base_filter)
 #    wdPage = wdi_core.WDItemEngine(item_name=result["pwLabel"]["value"], data=data2add, server=server,
-#                                   domain="pathway")
+#                                  domain="pathway")
 
     wdPage.set_label(result["pwLabel"]["value"])
     wdPage.set_description(result['pwDescription']['value'])
@@ -358,12 +395,14 @@ def get_data_from_reactome(filename):
             return None
         else:
             species,id,eventType,label,description,reference,goterm,haspart,ispartof,endelement = line.split(',')
+#            species,id,eventType,label,description,reference,goterm,haspart,ispartof,proteins,endelement = line.split(',')
             # only deal with human at present
             if species != supported_species[current_species]['ReactomeCode']:
                 continue
             lorefs = parse_list_references(reference)
             lo_haspart = parse_list_references(haspart)
             lo_ispartof = parse_list_references(ispartof)
+ #           lo_proteins = parse_list_references(proteins)
             pathway = dict({'pwId': {'value': id, 'type': 'string'},
                             'pwLabel': {'value': label, 'type': 'string'},
                             'pwDescription': {'value': description, 'type': 'string'},
@@ -371,6 +410,7 @@ def get_data_from_reactome(filename):
                             'goTerm': {'value': goterm, 'type': 'string'},
                             'hasPart': {'value': lo_haspart, 'type': 'list'},
                             'isPartOf': {'value': lo_ispartof, 'type': 'list'},
+ #                           'proteins': {'value': lo_proteins, 'type': 'list'},
                             'eventType': {'value': eventType, 'type': 'string'}})
             pathways.append(pathway)
     b = dict({'bindings': pathways})
@@ -401,10 +441,16 @@ def check_settings(uname, filename):
 def output_report():
     timeStringNow = gmtime()
     filename = 'wikidata_update_{0}-{1}-{2}.csv'.format(timeStringNow[0], timeStringNow[1], timeStringNow[2])
+    pmidadd = 'pmids.bat'
+    fp = open(pmidadd, 'w')
     f = open(filename, 'w')
     f.write('missing pmids,')
     for pmid in missing_citations:
         f.write('{0},'.format(pmid))
+        if pmid != '""':
+            length = len(pmid)
+            short = pmid[1:length-1]
+            fp.write('C:\curl\src\curl.exe --header "Authorization: Token 6277c658b5e42679f8b0f88309358ec1e0265533" tools.wmflabs.org/fatameh/token/pmid/add/{0}\n'.format(short))
     f.write('\n')
     f.write('missing go terms,')
     for term in missing_go_terms:
@@ -412,6 +458,10 @@ def output_report():
     f.write('\n')
     f.write('missing reactome,')
     for id in missing_reactome_references:
+        f.write('{0},'.format(id))
+    f.write('\n')
+    f.write('missing proteins,')
+    for id in missing_uniprot:
         f.write('{0},'.format(id))
     f.write('\n')
     f.write('wikidata entries,')
@@ -440,6 +490,7 @@ def main(args):
         missing_citations.clear()
         missing_go_terms.clear()
         missing_reactome_references.clear()
+        missing_uniprot.clear()
         try:
             logincreds = wdi_login.WDLogin(user=args[1], pwd=args[2], server=server)
  #           logincreds = wdi_login.WDLogin(user=args[1], server=server)
