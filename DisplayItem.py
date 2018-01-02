@@ -89,6 +89,8 @@ class DisplayItem():
             claim_value = self.get_item_claim(obj)
         elif obj['datatype'] == 'time':
             claim_value = obj['datavalue']['value']['time']
+        elif obj['datatype'] == 'external-id':
+            claim_value = self.get_string_claim(obj)
         else:
             print('Unexpected type {0} encountered'.format(obj['datatype']))
             claim_value = 'No claim value'

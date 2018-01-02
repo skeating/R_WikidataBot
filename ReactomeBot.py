@@ -2,8 +2,7 @@ __author__ = 'Sarah Keating'
 
 from wikidataintegrator import wdi_core, wdi_login, wdi_property_store, wdi_helpers
 import DisplayItem
-import acquire_data
-#import WDGetData
+import add_entry
 import os
 import sys
 import pprint
@@ -83,172 +82,6 @@ def create_reference(result):
 
 
 
-def add_go_term(prep, result, reference):
-    ''' Function to add the instance of property for a GO term
-        This looks up the go identifier id in wikidata so that it can create the appropriate link
-    '''
-    addgo = acquire_data.WDGetData('goterm', 'P31', wikidata_sparql)
-    addgo.add_term(result['goTerm']['value'], prep)
-#     goterm = '\"' + result['goTerm']['value'] + '\"'
-#     if goterm == '""':
-#         return
-#
-#     query = "SELECT * WHERE { VALUES ?goterm {"
-#     query += goterm
-#     query += "} ?item wdt:P686 ?goterm .}"
-# #    print(query)
-#
-#     found = False
-#     wikidata_sparql.setQuery(query)
-#     wikidata_results = wikidata_sparql.query().convert()
-#
-#     for wikidata_result in wikidata_results["results"]["bindings"]:
-#         found = True
-#         # P31 = instance of
-#         if 'P31' not in prep.keys():
-#             prep["P31"] = []
-#         prep['P31'].append(wdi_core.WDItemID(value=wikidata_result["item"]["value"].replace("http://www.wikidata.org/entity/", ""), prop_nr='P31',
-#                                            references=[copy.deepcopy(reference)]))
-#     if not found:
-#         missing_go_terms.append(goterm)
-
-def add_citations(prep, result, reference):
-    ''' Function to add the cites property
-        This looks up the pudmed id in wikidata so that it can create the appropriate link
-
-        This is copied from lines 170 - 188 of PathwayBot.py as of Mar 13
-
-        EXCEPT
-
-        the query to wikipathways is removed; the appropriate PubMed Id link is supplied
-        by the reactome export
-    '''
-    pubmed_citations = []
-    for citation in result['publication']['value']:
-        pubmed_citations.append("\""+citation.replace("http://identifiers.org/pubmed/", "")+"\"")
-
-    if pubmed_citations == []:
-        return
-
-    query = "SELECT * WHERE { VALUES ?pmid {"
-    query += " ".join(pubmed_citations)
-    query += "} ?item wdt:P698 ?pmid .}"
-#    print(query)
-
-    wikidata_sparql.setQuery(query)
-    wikidata_results = wikidata_sparql.query().convert()
-
-    for wikidata_result in wikidata_results["results"]["bindings"]:
-        # P2860 = cites
-        if 'P2860' not in prep.keys():
-            prep["P2860"] = []
-        prep['P2860'].append(wdi_core.WDItemID(value=wikidata_result["item"]["value"].replace("http://www.wikidata.org/entity/", ""), prop_nr='P2860',
-                                           references=[copy.deepcopy(reference)]))
-        result = "\"{0}\"".format(wikidata_result['pmid']['value'])
-        if result in pubmed_citations:
-            pubmed_citations.remove(result)
-    for citation in pubmed_citations:
-        missing_citations.append(citation)
-
-
-def add_part_of(prep, result, reference):
-    ''' Function to add the part of property
-        This looks up the reactome id in wikidata so that it can create the appropriate link
-    '''
-    part_of = []
-    for partof in result['isPartOf']['value']:
-        part_of.append("\""+partof+"\"")
-
-    if part_of == []:
-        return
-
-    query = "SELECT * WHERE { VALUES ?reactomeid {"
-    query += " ".join(part_of)
-    query += "} ?item wdt:P3937 ?reactomeid .}"
-#    print(query)
-
-    wikidata_sparql.setQuery(query)
-    wikidata_results = wikidata_sparql.query().convert()
-
-    for wikidata_result in wikidata_results["results"]["bindings"]:
-        # P361 = part of
-        if 'P361' not in prep.keys():
-            prep["P361"] = []
-        prep['P361'].append(wdi_core.WDItemID(value=wikidata_result["item"]["value"].replace("http://www.wikidata.org/entity/", ""), prop_nr='P361',
-                                           references=[copy.deepcopy(reference)]))
-        result = "\"{0}\"".format(wikidata_result['reactomeid']['value'])
-        if result in part_of:
-            part_of.remove(result)
-    for partof in part_of:
-        missing_reactome_references.append(partof)
-
-
-def add_haspart(prep, result, reference):
-    ''' Function to add the has part property
-        This looks up the reactome id in wikidata so that it can create the appropriate link
-    '''
-    has_part = []
-    for partof in result['hasPart']['value']:
-        has_part.append("\""+partof+"\"")
-
-    if has_part == []:
-        return
-
-    query = "SELECT * WHERE { VALUES ?reactomeid {"
-    query += " ".join(has_part)
-    query += "} ?item wdt:P3937 ?reactomeid .}"
-#    print(query)
-
-    wikidata_sparql.setQuery(query)
-    wikidata_results = wikidata_sparql.query().convert()
-
-    for wikidata_result in wikidata_results["results"]["bindings"]:
-        # P527 = has part
-        if 'P527' not in prep.keys():
-            prep["P527"] = []
-        prep['P527'].append(wdi_core.WDItemID(value=wikidata_result["item"]["value"].replace("http://www.wikidata.org/entity/", ""), prop_nr='P527',
-                                           references=[copy.deepcopy(reference)]))
-        result = "\"{0}\"".format(wikidata_result['reactomeid']['value'])
-        if result in has_part:
-            has_part.remove(result)
-    for partof in has_part:
-        missing_reactome_references.append(partof)
-
-
-def add_proteins(prep, result, reference):
-    ''' Function to add the has part property
-        This looks up the uniprot id in wikidata so that it can create the appropriate link
-    '''
-    has_part = []
-    for partof in result['proteins']['value']:
-        part = "\""+partof+"\""
-        if part not in has_part:
-            has_part.append(part)
-
-    if has_part == []:
-        return
-
-    query = "SELECT * WHERE { VALUES ?uniprotid {"
-    query += " ".join(has_part)
-    query += "} ?item wdt:P352 ?uniprotid .}"
-#    print(query)
-
-    wikidata_sparql.setQuery(query)
-    wikidata_results = wikidata_sparql.query().convert()
-
-    for wikidata_result in wikidata_results["results"]["bindings"]:
-        # P527 = has part
-        if 'P527' not in prep.keys():
-            prep["P527"] = []
-        prep['P527'].append(wdi_core.WDItemID(value=wikidata_result["item"]["value"].replace("http://www.wikidata.org/entity/", ""), prop_nr='P527',
-                                           references=[copy.deepcopy(reference)]))
-        result = "\"{0}\"".format(wikidata_result['uniprotid']['value'])
-        if result in has_part:
-            has_part.remove(result)
-    for partof in has_part:
-        missing_reactome_references.append(partof)
-
-
 def create_or_update_items(logincreds, results, test=0):
     """ this function takes the results dictionary from Reactome;
     which hopefully emulates the JSON returned by the wikipathways query;
@@ -310,11 +143,8 @@ def create_or_update_item(logincreds, result, test, prep):
     prep["P3937"] = [wdi_core.WDString(value=result["pwId"]["value"], prop_nr='P3937')]
 
     # pmid queries happen here
-    add_citations(prep, result, reference)
-    add_part_of(prep, result, reference)
-    add_haspart(prep, result, reference)
-    add_go_term(prep, result, reference)
-#    add_proteins(prep, result, reference)
+    add_pathway = add_entry.AddPathway(wikidata_sparql, reference)
+    add_pathway.add_pathway(prep, result)
     data2add = []
     for key in prep.keys():
         for statement in prep[key]:
