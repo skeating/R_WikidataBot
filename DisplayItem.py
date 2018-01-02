@@ -1,4 +1,4 @@
-__author__ = 'Sarah'
+__author__ = 'Sarah Keating'
 
 from wikidataintegrator import wdi_core
 
@@ -48,7 +48,8 @@ class DisplayItem():
             claims = self.item['claims']
             print('Claims:')
             for claim_val in claims:
-                self.show_claim(claims[claim_val])
+                if claim_val != 'P703':
+                    self.show_claim(claims[claim_val])
 
     def show_claim(self, claim):
         for i in range(0, len(claim)):

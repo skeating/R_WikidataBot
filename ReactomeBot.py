@@ -1,7 +1,9 @@
-__author__ = 'Sarah'
+__author__ = 'Sarah Keating'
 
-from wikidataintegrator import wdi_core, wdi_login, wdi_property_store
+from wikidataintegrator import wdi_core, wdi_login, wdi_property_store, wdi_helpers
 import DisplayItem
+import acquire_data
+#import WDGetData
 import os
 import sys
 import pprint
@@ -11,8 +13,8 @@ from SPARQLWrapper import SPARQLWrapper, JSON
 
 # global variables that need to be set/changed
 # are we actually writing to wikidata
-writing_to_WD = True
-fast_run = True
+writing_to_WD = False
+fast_run = False #True
 
 # do we use a date to show when retrieved or the Reactome version number
 # note a wikidata entry must use date but for testing I use a version number so
@@ -37,7 +39,7 @@ fast_run_base_filter = dict({'P3937': '', 'P703': 'Q15978631'})
 # tell the properties about reactome ID
 wdi_property_store.wd_properties['P3937'] = {
         'datatype': 'string',
-        'name': 'Reactome Pathway ID',
+        'name': 'Reactome ID',
         'domain': ['pathways'],
         'core_id': True
     }
@@ -85,28 +87,30 @@ def add_go_term(prep, result, reference):
     ''' Function to add the instance of property for a GO term
         This looks up the go identifier id in wikidata so that it can create the appropriate link
     '''
-    goterm = '\"' + result['goTerm']['value'] + '\"'
-    if goterm == '""':
-        return
-
-    query = "SELECT * WHERE { VALUES ?goterm {"
-    query += goterm
-    query += "} ?item wdt:P686 ?goterm .}"
-#    print(query)
-
-    found = False
-    wikidata_sparql.setQuery(query)
-    wikidata_results = wikidata_sparql.query().convert()
-
-    for wikidata_result in wikidata_results["results"]["bindings"]:
-        found = True
-        # P31 = instance of
-        if 'P31' not in prep.keys():
-            prep["P31"] = []
-        prep['P31'].append(wdi_core.WDItemID(value=wikidata_result["item"]["value"].replace("http://www.wikidata.org/entity/", ""), prop_nr='P31',
-                                           references=[copy.deepcopy(reference)]))
-    if not found:
-        missing_go_terms.append(goterm)
+    addgo = acquire_data.WDGetData('goterm', 'P31', wikidata_sparql)
+    addgo.add_term(result['goTerm']['value'], prep)
+#     goterm = '\"' + result['goTerm']['value'] + '\"'
+#     if goterm == '""':
+#         return
+#
+#     query = "SELECT * WHERE { VALUES ?goterm {"
+#     query += goterm
+#     query += "} ?item wdt:P686 ?goterm .}"
+# #    print(query)
+#
+#     found = False
+#     wikidata_sparql.setQuery(query)
+#     wikidata_results = wikidata_sparql.query().convert()
+#
+#     for wikidata_result in wikidata_results["results"]["bindings"]:
+#         found = True
+#         # P31 = instance of
+#         if 'P31' not in prep.keys():
+#             prep["P31"] = []
+#         prep['P31'].append(wdi_core.WDItemID(value=wikidata_result["item"]["value"].replace("http://www.wikidata.org/entity/", ""), prop_nr='P31',
+#                                            references=[copy.deepcopy(reference)]))
+#     if not found:
+#         missing_go_terms.append(goterm)
 
 def add_citations(prep, result, reference):
     ''' Function to add the cites property
@@ -328,12 +332,18 @@ def create_or_update_item(logincreds, result, test, prep):
     # pprint.pprint(wd_json_representation)
 
     if (writing_to_WD):
-        item_id_value = wdPage.write(logincreds)
+        item_id_value = 0
+        try:
+            item_id_value = wdPage.write(logincreds)
 
-        if item_id_value != 0:
-            edited_wd_pages.append(item_id_value)
-            print('https://www.wikidata.org/wiki/{0}'.format(item_id_value))
-#            show_item(item_id_value)
+            if item_id_value != 0:
+                edited_wd_pages.append(item_id_value)
+                print('https://www.wikidata.org/wiki/{0}'.format(item_id_value))
+    #            show_item(item_id_value)
+        except Exception as e:
+#            print(e)
+            wdi_core.WDItemEngine.log("ERROR", wdi_helpers.format_msg(item_id_value, 'P3937', None, str(e), type(e)))
+            print('caught exception')
     else:
         item_id_value = 0
         if (server == 'test.wikidata.org'):
@@ -351,7 +361,7 @@ def create_or_update_item(logincreds, result, test, prep):
             else:
                 edited_wd_pages.append(item_id_value)
 
-#                show_item(item_id_value, wdpage=wdPage)
+                show_item(item_id_value, wdpage=wdPage)
                 print('\n')
 
 
@@ -479,7 +489,7 @@ def main(args):
        NOTE: At present if will only actually write pages to test,
        the global variable writing_to_WD needs to set true
     """
-    filename = 'reactome_data.csv'
+    filename = 'data/reactome_data-test.csv'
     if len(args) < 3 or len(args) > 4:
         print(main.__doc__)
         sys.exit()
@@ -503,11 +513,7 @@ def main(args):
         if not results:
             print('No wikidata entries made')
             sys.exit()
-        try:
-            create_or_update_items(logincreds, results)
-        except Exception as e:
-            print('Error writing results: {0}'.format(e.args[0]))
-            sys.exit()
+        create_or_update_items(logincreds, results)
 
         print('Upload successfully completed')
         print(missing_citations)
