@@ -2,6 +2,8 @@ __author__ = 'Sarah Keating'
 
 from wikidataintegrator import wdi_core
 import copy
+import global_variables
+
 
 class WDGetData():
     """
@@ -14,12 +16,6 @@ class WDGetData():
 
         self.missing_terms = []
 
-        self.supported_properties = [{'id': 'P686', 'name': 'goterm'},
-                                     {'id': 'P3937', 'name': 'reactomeid'},
-                                     {'id': 'P698', 'name': 'pmid'},
-                                     {'id': 'P352', 'name': 'uniprotid'},
-#                                     {'id': 'P527', 'name': 'reactomeid'}
-                                     ]
         self.open_brace = '{'
         self.close_brace = '}'
         self.property_reference = self.get_property_number()
@@ -93,7 +89,7 @@ class WDGetData():
 
     def get_property_number(self):
         number = ''
-        for prop in self.supported_properties:
+        for prop in global_variables.supported_properties:
             if prop['name'] == self.property:
                 number = prop['id']
                 break
