@@ -61,3 +61,6 @@ testOutput/
 .idea/
 test/output_test.json
 reactome_data.csv
+data/
+pmids.bat
+logs/
