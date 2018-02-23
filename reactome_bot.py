@@ -15,7 +15,7 @@ class ReactomeBot:
         Class to run the Reactome Bot
         """
         self.writing_to_WD = write_to_wd
-        self.fast_run = True
+        self.fast_run = False
 
         # variables for the wikidata run
         self.logincreds = None

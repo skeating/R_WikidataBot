@@ -59,7 +59,7 @@ class ReactomeData:
                 lo_haspart = self.parse_list_references(haspart)
                 lo_ispartof = self.parse_list_references(ispartof)
                 pathway = dict({'pwId': {'value': id, 'type': 'string'},
-                                'pwLabel': {'value': label, 'type': 'string'},
+                                'pwLabel': {'value': self.remove_additional_name(label), 'type': 'string'},
                                 'pwDescription': {'value': description, 'type': 'string'},
                                 'publication': {'value': lorefs, 'type': 'list'},
                                 'goTerm': {'value': goterm, 'type': 'string'},
@@ -101,20 +101,37 @@ class ReactomeData:
                 print('Re run WikidataExport to create an accurate file')
                 return None
             else:
+                portalId = ''
                 if len(variables) == 6:
                     species,entityType,id,label,haspart,endelement = line.split(',')
                 else:
                     species,entityType,id,label,haspart,portalId,endelement = line.split(',')
+                if portalId == 'None':
+                    portalId = ''
                 lo_haspart = self.parse_list_references(haspart)
 
                 if (entityType == 'COMP'):
                     description = 'Macromolecular complex'
+                elif entityType == 'DS':
+                    description = 'Defined set from Reactome'
+                elif entityType == 'CS':
+                    description = 'Candidate set from Reactome'
+                elif entityType == 'OS':
+                    description = 'Open set from Reactome'
 
                 entity = dict({'pwId': {'value': id, 'type': 'string'},
-                               'pwLabel': {'value': label, 'type': 'string'},
+                               'pwLabel': {'value': self.remove_additional_name(label), 'type': 'string'},
                                'pwDescription': {'value': description, 'type': 'string'},
-                               'hasPart': {'value': lo_haspart, 'type': 'list'}})
+                               'hasPart': {'value': lo_haspart, 'type': 'list'},
+                               'entityType': entityType, 'cportal': portalId})
                 entities.append(entity)
         b = dict({'bindings': entities})
         results = dict({'results': b})
         return results
+
+    def remove_additional_name(self, orig):
+        bracket = orig.find('[')
+        if bracket > 0:
+            return orig[0:bracket-1]
+        else:
+            return orig

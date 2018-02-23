@@ -4,6 +4,7 @@ import acquire_wikidata_links
 import global_variables
 from wikidataintegrator import wdi_core
 import copy
+from time import gmtime, strftime
 
 
 class AddEntry:
@@ -132,12 +133,22 @@ class AddPathway(AddEntry):
         AddEntry.add_haspart(self, property_list, result)
         AddEntry.add_part_of(self, property_list, result)
 
+
 class AddEntity(AddEntry):
     """
-    Class to add a Pathway entry
+    Class to add a entity entry
     """
     def __init__(self, reactome_id, wd_sparql, reference, species):
         AddEntry.__init__(self, reactome_id, wd_sparql, reference, species)
+        self.complex_portal = 'https://www.ebi.ac.uk/complexportal/complex/'
+
+    def create_complex_portal_reference(self, cp_id):
+        ref_stated_in = wdi_core.WDItemID(value="Q47196990", prop_nr='P248', is_reference=True)
+        str_time_now = strftime("+%Y-%m-%dT00:00:00Z", gmtime())
+        ref_retrieved = wdi_core.WDTime(str_time_now, prop_nr='P813', is_reference=True)
+        ref_url = wdi_core.WDString(self.complex_portal+cp_id, prop_nr='P854', is_reference=True)
+        reference = [ref_stated_in, ref_retrieved, ref_url]
+        return reference
 
     def add_entity(self, property_list, result):
         """
@@ -146,9 +157,28 @@ class AddEntity(AddEntry):
         :param result: the data from Reactome
         :return:
         """
-        # add instance of protein complex
-        property_list["P31"] = [wdi_core.WDItemID(value="Q420927", prop_nr="P31",
-                                                  references=[copy.deepcopy(self.reference)])]
+        et = result['entityType']
+        if et == 'COMP':
+            wditem_value = 'Q420927'
+        elif et == 'DS':
+            wditem_value = 'Q47461827'
+        elif et == 'CS':
+            wditem_value = 'Q47461807'
+        elif et == 'OS':
+            wditem_value = 'Q49980450'
+        else:
+            return
+
+        cpref = []
+        if result['cportal'] != '':
+            cpref = self.create_complex_portal_reference(result['cportal'])
+        # P31 = instance of
+        if (cpref):
+            property_list["P31"] = [wdi_core.WDItemID(value=wditem_value, prop_nr="P31",
+                                                      references=[copy.deepcopy(self.reference), cpref])]
+        else:
+            property_list["P31"] = [wdi_core.WDItemID(value=wditem_value, prop_nr="P31",
+                                                      references=[copy.deepcopy(self.reference)])]
 
         # P2888 = exact match
         property_list["P2888"] = [wdi_core.WDUrl(self.match_url, prop_nr='P2888',
@@ -164,12 +194,20 @@ class AddEntity(AddEntry):
         self.add_entity_parts(property_list, result)
 
     def add_entity_parts(self, property_list, result):
+        """
+            Function to write the parts of an entity which might be
+            other reactome entities such as sets containing complexes
+        :param property_list: the list of property entries that will be made
+        :param result: the data from Reactome
+        :return:
+        """
         has_part = []
         has_protein = []
         has_simple = []
         for partof in result['hasPart']['value']:
-            datatype, ref, quantity, stId = partof.split(' ')
+            datatype, ref, quantity, st_id = partof.split(' ')
             if datatype == 'EWASMOD':
+                # ignore these for now
                 continue
             elif datatype == 'EWAS':
                 protein = "\""+ref+"\""
@@ -179,7 +217,10 @@ class AddEntity(AddEntry):
                 se = "\""+ref+"\""
                 if se not in has_simple:
                     has_simple.append(se)
-#            elif datatype == "COMP":
+            elif self.is_reactome_datatype(datatype):
+                part = "\""+st_id+"\""
+                if part not in has_part:
+                    has_part.append(part)
 
         term_to_add = acquire_wikidata_links.WDGetData('reactomeid', 'P527', self.wikidata_sparql)
         term_to_add.add_multiple_terms(has_part, property_list, self.reference)
@@ -196,5 +237,15 @@ class AddEntity(AddEntry):
         for term in term_to_add.get_missing_terms():
             global_variables.used_wd_ids['chebi'].append(term)
 
-
-
+    @staticmethod
+    def is_reactome_datatype(dt):
+        if dt == 'COMP':
+            return True
+        elif dt == 'OS':
+            return True
+        elif dt == 'CS':
+            return True
+        elif dt == 'DS':
+            return True
+        else:
+            return False

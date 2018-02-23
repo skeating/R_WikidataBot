@@ -18,7 +18,7 @@ def check_settings(uname):
     else:
         print('Using bot account')
     writewd = True
-    writing_to_wd = 'N'  # input('write to wikidata (Y)')
+    writing_to_wd = input('write to wikidata (Y):')
     if writing_to_wd == 'Y':
         var = input('Proceed (Y):')
     else:
@@ -35,7 +35,7 @@ def main(args):
        This program take the input-filename or use data/reactome_data-test.csv
        if none given and write the wikidata pages
     """
-    filename = 'data/entity-data_test.csv'
+    filename = 'data/entity_data_test.csv'
     if len(args) < 3 or len(args) > 4:
         print(main.__doc__)
         sys.exit()
