@@ -30,9 +30,9 @@ class AddEntry:
         :param result: the data from Reactome
         :return:
         """
-        addgo = acquire_wikidata_links.WDGetData('goterm', 'P31', self.wikidata_sparql)
-        addgo.add_term(result['goTerm']['value'], property_list, self.reference)
-        for term in addgo.get_missing_terms():
+        term_to_add = acquire_wikidata_links.WDGetData('goterm', 'P31', self.wikidata_sparql)
+        term_to_add.add_term(result['goTerm']['value'], property_list, self.reference)
+        for term in term_to_add.get_missing_terms():
             global_variables.used_wd_ids['goterms'].append(term)
 
     def add_citations(self, property_list, result):
@@ -53,9 +53,9 @@ class AddEntry:
         if not pubmed_citations:
             return
 
-        addgo = acquire_wikidata_links.WDGetData('pmid', 'P2860', self.wikidata_sparql)
-        addgo.add_multiple_terms(pubmed_citations, property_list, self.reference)
-        for term in addgo.get_missing_terms():
+        term_to_add = acquire_wikidata_links.WDGetData('pmid', 'P2860', self.wikidata_sparql)
+        term_to_add.add_multiple_terms(pubmed_citations, property_list, self.reference)
+        for term in term_to_add.get_missing_terms():
             global_variables.used_wd_ids['pmid'].append(term)
 
     def add_part_of(self, property_list, result):
@@ -72,9 +72,9 @@ class AddEntry:
         if not part_of:
             return
 
-        addgo = acquire_wikidata_links.WDGetData('reactomeid', 'P527', self.wikidata_sparql)
-        addgo.add_multiple_terms(part_of, property_list, self.reference)
-        for term in addgo.get_missing_terms():
+        term_to_add = acquire_wikidata_links.WDGetData('reactomeid', 'P361', self.wikidata_sparql)
+        term_to_add.add_multiple_terms(part_of, property_list, self.reference)
+        for term in term_to_add.get_missing_terms():
             global_variables.used_wd_ids['reactome'].append(term)
 
     def add_haspart(self, property_list, result):
@@ -92,9 +92,9 @@ class AddEntry:
         if not has_part:
             return
 
-        addgo = acquire_wikidata_links.WDGetData('reactomeid', 'P361', self.wikidata_sparql)
-        addgo.add_multiple_terms(has_part, property_list, self.reference)
-        for term in addgo.get_missing_terms():
+        term_to_add = acquire_wikidata_links.WDGetData('reactomeid', 'P527', self.wikidata_sparql)
+        term_to_add.add_multiple_terms(has_part, property_list, self.reference)
+        for term in term_to_add.get_missing_terms():
             global_variables.used_wd_ids['reactome'].append(term)
 
 
@@ -104,7 +104,7 @@ class AddPathway(AddEntry):
     """
     def __init__(self, reactome_id, wd_sparql, reference, species):
         AddEntry.__init__(self, reactome_id, wd_sparql, reference, species)
-        
+
     def add_pathway(self, property_list, result):
         """
         function to add pathway item to wikidata
@@ -131,3 +131,70 @@ class AddPathway(AddEntry):
         AddEntry.add_citations(self, property_list, result)
         AddEntry.add_haspart(self, property_list, result)
         AddEntry.add_part_of(self, property_list, result)
+
+class AddEntity(AddEntry):
+    """
+    Class to add a Pathway entry
+    """
+    def __init__(self, reactome_id, wd_sparql, reference, species):
+        AddEntry.__init__(self, reactome_id, wd_sparql, reference, species)
+
+    def add_entity(self, property_list, result):
+        """
+        function to add pathway item to wikidata
+        :param property_list: the list of property entries that will be made
+        :param result: the data from Reactome
+        :return:
+        """
+        # add instance of protein complex
+        property_list["P31"] = [wdi_core.WDItemID(value="Q420927", prop_nr="P31",
+                                                  references=[copy.deepcopy(self.reference)])]
+
+        # P2888 = exact match
+        property_list["P2888"] = [wdi_core.WDUrl(self.match_url, prop_nr='P2888',
+                                                 references=[copy.deepcopy(self.reference)])]
+
+        # P703 = found in taxon
+        property_list["P703"] = [wdi_core.WDItemID(value=self.species, prop_nr='P703',
+                                                   references=[copy.deepcopy(self.reference)])]
+
+        # P3937 = Reactome ID
+        property_list["P3937"] = [wdi_core.WDString(value=self.reactome_id, prop_nr='P3937')]
+
+        self.add_entity_parts(property_list, result)
+
+    def add_entity_parts(self, property_list, result):
+        has_part = []
+        has_protein = []
+        has_simple = []
+        for partof in result['hasPart']['value']:
+            datatype, ref, quantity, stId = partof.split(' ')
+            if datatype == 'EWASMOD':
+                continue
+            elif datatype == 'EWAS':
+                protein = "\""+ref+"\""
+                if protein not in has_protein:
+                    has_protein.append(protein)
+            elif datatype == "SE":
+                se = "\""+ref+"\""
+                if se not in has_simple:
+                    has_simple.append(se)
+#            elif datatype == "COMP":
+
+        term_to_add = acquire_wikidata_links.WDGetData('reactomeid', 'P527', self.wikidata_sparql)
+        term_to_add.add_multiple_terms(has_part, property_list, self.reference)
+        for term in term_to_add.get_missing_terms():
+            global_variables.used_wd_ids['reactome'].append(term)
+
+        term_to_add = acquire_wikidata_links.WDGetData('uniprotid', 'P527', self.wikidata_sparql)
+        term_to_add.add_multiple_terms(has_protein, property_list, self.reference)
+        for term in term_to_add.get_missing_terms():
+            global_variables.used_wd_ids['proteins'].append(term)
+
+        term_to_add = acquire_wikidata_links.WDGetData('chebi', 'P527', self.wikidata_sparql)
+        term_to_add.add_multiple_terms(has_simple, property_list, self.reference)
+        for term in term_to_add.get_missing_terms():
+            global_variables.used_wd_ids['chebi'].append(term)
+
+
+

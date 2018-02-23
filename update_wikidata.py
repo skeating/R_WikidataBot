@@ -7,14 +7,12 @@ import global_variables
 import format_reactome_data
 
 
-def check_settings(uname, filename):
+def check_settings(uname):
     """
     Function just to double check we want to write data to wikidata
     :param uname: the username supplied
-    :param filename: the filename of reactome data
     :return: True/False depending on whether to proceed
     """
-    print('Using input file: {0}'.format(filename))
     if uname == 'SarahKeating':
         print('Using skeating account')
     else:
@@ -37,15 +35,15 @@ def main(args):
        This program take the input-filename or use data/reactome_data-test.csv
        if none given and write the wikidata pages
     """
-    filename = 'data/reactome_data-test.csv'
+    filename = 'data/entity-data_test.csv'
     if len(args) < 3 or len(args) > 4:
         print(main.__doc__)
         sys.exit()
     elif len(args) == 4:
         filename = args[3]
 
-    [go, writewd] = check_settings(args[1], filename)
-    if go:
+    [proceed, writewd] = check_settings(args[1])
+    if proceed:
         bot = reactome_bot.ReactomeBot(writewd)
         server = global_variables.server
         try:
@@ -53,15 +51,23 @@ def main(args):
         except Exception as e:
             print('Error logging into wikidata: {0}'.format(e.args[0]))
             sys.exit()
-        data = format_reactome_data.ReactomeData('HSA', 'pathway')
+        # data = format_reactome_data.ReactomeData('HSA', 'pathway')
+        # results = data.get_data_from_reactome(filename)
+        # if not results:
+        #     print('No wikidata entries made')
+        #     sys.exit()
+        # bot.set_logincreds(logincreds)
+        # bot.create_or_update_items(results, 'pathway')
+        # bot.output_report()
+
+        data = format_reactome_data.ReactomeData('HSA', 'entity')
         results = data.get_data_from_reactome(filename)
         if not results:
             print('No wikidata entries made')
             sys.exit()
         bot.set_logincreds(logincreds)
-        bot.create_or_update_items(results)
+        bot.create_or_update_items(results, 'entity')
         bot.output_report()
-
         print('Upload successfully completed')
 
 if __name__ == '__main__':
