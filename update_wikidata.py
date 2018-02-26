@@ -46,7 +46,6 @@ def write_data_from_file(data_type, filename, bot, logincreds):
         done = False
         count = 0
         while not done and count < 2:
-            print('Run no ' + str(count) + 'started =========================================================')
             bot.create_or_update_items(results, data_type)
             count += 1
             if len(global_variables.used_wd_ids['reactome']) == 0:
@@ -60,8 +59,8 @@ def main(args):
        This program take the input-filename or use data/reactome_data-test.csv
        if none given and write the wikidata pages
     """
-    test = True
-    filename = 'data/entity_data_test.csv'
+    test = False
+    filename = 'data/entity_data_test100.csv'
     data_type = 'entity'
 #    filename = 'data/reactome_data-test.csv'
 #    data_type = 'pathway'

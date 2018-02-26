@@ -98,7 +98,8 @@ class ReactomeBot:
                 item_id_value = wdpage.write(self.logincreds)
 
                 if item_id_value != 0:
-                    global_variables.edited_wd_pages.append(item_id_value)
+                    if item_id_value not in global_variables.edited_wd_pages:
+                        global_variables.edited_wd_pages.append(item_id_value)
                     print('https://www.wikidata.org/wiki/{0}'.format(item_id_value))
             except Exception as e:
                 wdi_core.WDItemEngine.log("ERROR",
