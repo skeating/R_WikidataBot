@@ -33,6 +33,14 @@ class ReactomeBot:
             'core_id': True
         }
 
+    def set_fast_run(self, fast):
+        """
+            sets the fast run flag
+        :param fast: boolean for fast run flag
+        :return:
+        """
+        self.fast_run = fast
+
     @staticmethod
     def create_reference(result):
         """
@@ -52,7 +60,7 @@ class ReactomeBot:
             reference = [ref_stated_in, ref_retrieved, ref_reactome]
         return reference
 
-    def create_or_update_items(self, results, dataType):
+    def create_or_update_items(self, results, data_type):
         """
         Function to loop through all results and create or update a wikidata item
         :param results: the dictionary of results read from Reactome
@@ -64,7 +72,7 @@ class ReactomeBot:
             property_list = dict()
             if result['pwLabel']['value'] == '':
                 continue
-            self.create_or_update_item(result, property_list, dataType)
+            self.create_or_update_item(result, property_list, data_type)
 
     def write_to_wikidata(self, property_list, result):
         """
@@ -134,16 +142,16 @@ class ReactomeBot:
             f.write('{0},'.format(react))
         f.write('\n')
         f.write('missing proteins,')
-        for id in global_variables.used_wd_ids['proteins']:
-            f.write('{0},'.format(id))
+        for term in global_variables.used_wd_ids['proteins']:
+            f.write('{0},'.format(term))
         f.write('\n')
         f.write('missing chebi,')
-        for id in global_variables.used_wd_ids['chebi']:
-            f.write('{0},'.format(id))
+        for term in global_variables.used_wd_ids['chebi']:
+            f.write('{0},'.format(term))
         f.write('\n')
         f.write('wikidata entries,')
-        for id in global_variables.edited_wd_pages:
-            f.write('{0},'.format(id))
+        for term in global_variables.edited_wd_pages:
+            f.write('{0},'.format(term))
         f.write('\n')
         f.close()
     
@@ -173,7 +181,7 @@ class ReactomeBot:
         elif data_type == 'entity':
             print('Creating/updating entity: ' + result["pwId"]["value"])
             add_entity = add_entry.AddEntity(result['pwId']['value'], self.wikidata_sparql, reference,
-                                               self.current_species)
+                                             self.current_species)
             add_entity.add_entity(property_list, result)
         self.write_to_wikidata(property_list, result)
 

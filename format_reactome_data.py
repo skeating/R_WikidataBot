@@ -54,11 +54,12 @@ class ReactomeData:
                 print('Re run WikidataExport to create an accurate file')
                 return None
             else:
-                species,id,eventType,label,description,reference,goterm,haspart,ispartof,endelement = line.split(',')
+                species, st_id, event_type, label, description, reference, goterm, haspart, ispartof, endelement = \
+                    line.split(',')
                 lorefs = self.parse_list_references(reference)
                 lo_haspart = self.parse_list_references(haspart)
                 lo_ispartof = self.parse_list_references(ispartof)
-                pathway = dict({'pwId': {'value': id, 'type': 'string'},
+                pathway = dict({'pwId': {'value': st_id, 'type': 'string'},
                                 'pwLabel': {'value': self.remove_additional_name(label), 'type': 'string'},
                                 'pwDescription': {'value': description, 'type': 'string'},
                                 'publication': {'value': lorefs, 'type': 'list'},
@@ -69,7 +70,6 @@ class ReactomeData:
         b = dict({'bindings': pathways})
         results = dict({'results': b})
         return results
-
 
     def get_entity_data_from_reactome(self, filename):
         """
@@ -97,39 +97,42 @@ class ReactomeData:
             variables = line.split(',')
             if len(variables) != 6 and len(variables) != 7:
                 print('A line in the input csv file expects 6/7 comma separated entries')
-                print('species_code,entity_code,stableId,name,[part;part],complexportalid (only for complex),endelement')
+                print('species_code,entity_code,stableId,name,[part;part],'
+                      'complexportalid (only for complex),endelement')
                 print('Re run WikidataExport to create an accurate file')
                 return None
             else:
-                portalId = ''
+                portal_id = ''
                 if len(variables) == 6:
-                    species,entityType,id,label,haspart,endelement = line.split(',')
+                    species, entitytype, st_id, label, haspart, endelement = line.split(',')
                 else:
-                    species,entityType,id,label,haspart,portalId,endelement = line.split(',')
-                if portalId == 'None':
-                    portalId = ''
+                    species, entitytype, st_id, label, haspart, portal_id, endelement = line.split(',')
+                if portal_id == 'None':
+                    portal_id = ''
                 lo_haspart = self.parse_list_references(haspart)
 
-                if (entityType == 'COMP'):
+                description = ''
+                if entitytype == 'COMP':
                     description = 'Macromolecular complex'
-                elif entityType == 'DS':
+                elif entitytype == 'DS':
                     description = 'Defined set from Reactome'
-                elif entityType == 'CS':
+                elif entitytype == 'CS':
                     description = 'Candidate set from Reactome'
-                elif entityType == 'OS':
+                elif entitytype == 'OS':
                     description = 'Open set from Reactome'
 
-                entity = dict({'pwId': {'value': id, 'type': 'string'},
+                entity = dict({'pwId': {'value': st_id, 'type': 'string'},
                                'pwLabel': {'value': self.remove_additional_name(label), 'type': 'string'},
                                'pwDescription': {'value': description, 'type': 'string'},
                                'hasPart': {'value': lo_haspart, 'type': 'list'},
-                               'entityType': entityType, 'cportal': portalId})
+                               'entitytype': entitytype, 'cportal': portal_id})
                 entities.append(entity)
         b = dict({'bindings': entities})
         results = dict({'results': b})
         return results
 
-    def remove_additional_name(self, orig):
+    @staticmethod
+    def remove_additional_name(orig):
         bracket = orig.find('[')
         if bracket > 0:
             return orig[0:bracket-1]
