@@ -188,6 +188,11 @@ class ReactomeBot:
             add_entity = add_entry.AddEntity(result['pwId']['value'], self.wikidata_sparql, reference,
                                              self.current_species)
             add_entity.add_entity(property_list, result)
+        elif data_type == 'reaction':
+            print('Creating/updating reaction: ' + result["pwId"]["value"])
+            add_entity = add_entry.AddReaction(result['pwId']['value'], self.wikidata_sparql, reference,
+                                             self.current_species)
+            add_entity.add_reaction(property_list, result)
         self.write_to_wikidata(property_list, result)
 
     # future proofing functions to allow code to set species

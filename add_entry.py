@@ -197,7 +197,7 @@ class AddEntity(AddEntry):
 
         self.add_entity_parts(property_list, result)
 
-    def add_entity_parts(self, property_list, result):
+    def add_entity_parts(self, property_list, result, part_type=''):
         """
             Function to write the parts of an entity which might be
             other reactome entities such as sets containing complexes
@@ -211,7 +211,13 @@ class AddEntity(AddEntry):
         protein_qty = []
         has_simple = []
         simple_qty = []
-        for partof in result['hasPart']['value']:
+        partname = 'hasPart'
+        if part_type != '':
+            partname = part_type
+
+        for partof in result[partname]['value']:
+            if partof == 'null':
+                break
             datatype, ref, quantity, st_id = partof.split(' ')
             if datatype == 'EWASMOD':
                 # ignore these for now
@@ -233,25 +239,24 @@ class AddEntity(AddEntry):
                     part_qty.append(quantity)
 
         term_to_add = acquire_wikidata_links.WDGetData('reactomeid', 'P527', self.wikidata_sparql)
-        term_to_add.add_multiple_terms(has_part, property_list, self.reference, part_qty)
+        term_to_add.add_multiple_terms(has_part, property_list, self.reference, part_qty, part_type)
         for term in term_to_add.get_missing_terms():
             if term not in global_variables.used_wd_ids['reactome']:
                 global_variables.used_wd_ids['reactome'].append(term)
 
         term_to_add = acquire_wikidata_links.WDGetData('uniprotid', 'P527', self.wikidata_sparql)
-        term_to_add.add_multiple_terms(has_protein, property_list, self.reference, protein_qty)
+        term_to_add.add_multiple_terms(has_protein, property_list, self.reference, protein_qty, part_type)
         for term in term_to_add.get_missing_terms():
             if term not in global_variables.used_wd_ids['proteins']:
                 global_variables.used_wd_ids['proteins'].append(term)
 
         term_to_add = acquire_wikidata_links.WDGetData('chebi', 'P527', self.wikidata_sparql)
-        term_to_add.add_multiple_terms(has_simple, property_list, self.reference, simple_qty)
+        term_to_add.add_multiple_terms(has_simple, property_list, self.reference, simple_qty, part_type)
         for term in term_to_add.get_missing_terms():
             if term not in global_variables.used_wd_ids['chebi']:
                 global_variables.used_wd_ids['chebi'].append(term)
 
-    @staticmethod
-    def is_reactome_datatype(dt):
+    def is_reactome_datatype(self, dt):
         if dt == 'COMP':
             return True
         elif dt == 'OS':
@@ -262,3 +267,40 @@ class AddEntity(AddEntry):
             return True
         else:
             return False
+
+class AddReaction(AddEntity):
+    """
+    Class to add a Reaction entry
+    """
+    def __init__(self, reactome_id, wd_sparql, reference, species):
+        AddEntry.__init__(self, reactome_id, wd_sparql, reference, species)
+
+    def add_reaction(self, property_list, result):
+        """
+        function to add pathway item to wikidata
+        :param property_list: the list of property entries that will be made
+        :param result: the data from Reactome
+        :return:
+        """
+        # add instance of biological process
+        property_list["P31"] = [wdi_core.WDItemID(value="Q2996394", prop_nr="P31",
+                                                  references=[copy.deepcopy(self.reference)])]
+
+        # P2888 = exact match
+        property_list["P2888"] = [wdi_core.WDUrl(self.match_url, prop_nr='P2888',
+                                                 references=[copy.deepcopy(self.reference)])]
+
+        # P703 = found in taxon
+        property_list["P703"] = [wdi_core.WDItemID(value=self.species, prop_nr='P703',
+                                                   references=[copy.deepcopy(self.reference)])]
+
+        # P3937 = Reactome ID
+        property_list["P3937"] = [wdi_core.WDString(value=self.reactome_id, prop_nr='P3937')]
+
+        AddEntry.add_go_term(self, property_list, result)
+        AddEntry.add_citations(self, property_list, result)
+        AddEntry.add_part_of(self, property_list, result)
+        AddEntity.add_entity_parts(self, property_list, result, 'inputs')
+        AddEntity.add_entity_parts(self, property_list, result, 'outputs')
+        AddEntity.add_entity_parts(self, property_list, result, 'mods')
+

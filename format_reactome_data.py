@@ -13,6 +13,8 @@ class ReactomeData:
             return self.get_pathway_data_from_reactome(filename)
         elif self.data_type == "entity":
             return self.get_entity_data_from_reactome(filename)
+        elif self.data_type == "reaction":
+            return self.get_reaction_data_from_reactome(filename)
         else:
             return []
 
@@ -131,10 +133,54 @@ class ReactomeData:
         results = dict({'results': b})
         return results
 
-    @staticmethod
-    def remove_additional_name(orig):
-        bracket = orig.find('[')
-        if bracket > 0:
-            return orig[0:bracket-1]
-        else:
-            return orig
+    def get_reaction_data_from_reactome(self, filename):
+        """
+        This function creates a JSON representation of the Reactome data from a precise csv export
+        this emulates the results of the wikipathways query so common code can be used
+
+        If a filename is not given it will look for the default file
+
+        The form of the form of the csv file is:
+
+        species_code,stableId,eventType,Name,Description,[publication;publication;..],goterm,
+          [haspart_input;haspart_input], [haspart_output;], [haspart_mod;..],[partof],None
+
+        :param filename:
+        :return:
+        """
+        if not os.path.isfile(filename):
+            print('{0} not found aborting ...'.format(filename))
+            return None
+
+        f = open(filename, 'r')
+        lines = f.readlines()
+        f.close()
+        pathways = []
+        for line in lines:
+            variables = line.split(',')
+            if len(variables) != 12:
+                print('A line in the input csv file expects 10 comma separated entries')
+                print('species,id,type,label,description,reference,goterm,ispartof,inputs, outputs, modifiers,endelement')
+                print('Re run WikidataExport to create an accurate file')
+                return None
+            else:
+                species, st_id, event_type, label, description, reference, goterm, \
+                inputs, outputs, mods, ispartof, endelement = line.split(',')
+                lorefs = self.parse_list_references(reference)
+                lo_hasinput = self.parse_list_references(inputs)
+                lo_hasoutput = self.parse_list_references(outputs)
+                lo_hasmod = self.parse_list_references(mods)
+                lo_ispartof = self.parse_list_references(ispartof)
+                pathway = dict({'pwId': {'value': st_id, 'type': 'string'},
+                                'pwLabel': {'value': label, 'type': 'string'},
+                                'pwDescription': {'value': description, 'type': 'string'},
+                                'publication': {'value': lorefs, 'type': 'list'},
+                                'goTerm': {'value': goterm, 'type': 'string'},
+                                'inputs': {'value': lo_hasinput, 'type': 'list'},
+                                'outputs': {'value': lo_hasoutput, 'type': 'list'},
+                                'mods': {'value': lo_hasmod, 'type': 'list'},
+                                'isPartOf': {'value': lo_ispartof, 'type': 'list'}})
+                pathways.append(pathway)
+        b = dict({'bindings': pathways})
+        results = dict({'results': b})
+        return results

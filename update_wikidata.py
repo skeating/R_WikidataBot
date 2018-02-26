@@ -45,7 +45,7 @@ def write_data_from_file(data_type, filename, bot, logincreds):
         # put in a count so we dont endlessly cycle
         done = False
         count = 0
-        while not done and count < 2:
+        while not done and count < 1:
             bot.create_or_update_items(results, data_type)
             count += 1
             if len(global_variables.used_wd_ids['reactome']) == 0:
@@ -60,8 +60,8 @@ def main(args):
        if none given and write the wikidata pages
     """
     test = False
-    filename = 'data/entity_data_test100.csv'
-    data_type = 'entity'
+    filename = 'data/reaction_data-test.csv'
+    data_type = 'reaction'
 #    filename = 'data/reactome_data-test.csv'
 #    data_type = 'pathway'
     if len(args) < 3 or len(args) > 4:

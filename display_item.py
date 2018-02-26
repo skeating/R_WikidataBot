@@ -62,8 +62,8 @@ class DisplayItem():
             print('{0}: {1} {2}'.format(claim_type, self.get_label(claim_property), claim_value))
             if 'qualifiers-order' in claim[i] and 'qualifiers' in claim[i]:
                 self.write_qualifiers(claim[i])
-                if 'references' in claim[i]:
-                    self.write_references(claim[i])
+                # if 'references' in claim[i]:
+                #     self.write_references(claim[i])
 
     def write_qualifiers(self, claim):
         for qual in claim['qualifiers-order']:

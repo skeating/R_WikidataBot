@@ -55,7 +55,7 @@ class WDGetData():
         if not found:
             self.missing_terms.append(term)
 
-    def add_multiple_terms(self, value, property_list, reference, quantity=None):
+    def add_multiple_terms(self, value, property_list, reference, quantity=None, part_type=''):
         """
             Function to add the instance of the property to the property_list
             This looks up the identifier id in wikidata so that it can create the appropriate link
@@ -75,15 +75,13 @@ class WDGetData():
 
         for wikidata_result in wikidata_results["results"]["bindings"]:
             wikidata_entity = wikidata_result["item"]["value"].replace("http://www.wikidata.org/entity/", "")
-            quantity_qualifier = []
-            if quantity:
-                quantity_qualifier = self.create_qty_qualifier(wikidata_result, value, quantity)
+            total_qualifier = self.create_qualifier(wikidata_result, value, quantity, part_type)
             if self.property_id not in property_list.keys():
                 property_list[self.property_id] = []
             property_list[self.property_id].append(wdi_core.WDItemID(value=wikidata_entity,
                                                                      prop_nr=self.property_id,
                                                                      references=[copy.deepcopy(reference)],
-                                                                     qualifiers=quantity_qualifier))
+                                                                     qualifiers=total_qualifier))
             result = "\"{0}\"".format(wikidata_result[self.property]['value'])
             if result in terms:
                 terms.remove(result)
@@ -108,5 +106,33 @@ class WDGetData():
             this_index = value.index(this_item)
             if this_index < len(quantity):
                 qualifier = wdi_core.WDQuantity(int(quantity[this_index]), prop_nr='P1114', is_qualifier=True)
-                return [qualifier]
+                return qualifier
         return []
+
+    def create_part_qualifier(self, part_type):
+        qualifier = []
+        if part_type == 'inputs':
+             qualifier = wdi_core.WDItemID('Q45342565', prop_nr='P31', is_qualifier=True)
+        elif part_type == 'outputs':
+             qualifier = wdi_core.WDItemID('Q45342745', prop_nr='P31', is_qualifier=True)
+        elif part_type == 'mods':
+             qualifier = wdi_core.WDItemID('Q45342890', prop_nr='P31', is_qualifier=True)
+        return qualifier
+
+    def create_qualifier(self, wdresult, value, quantity, part_type):
+        quantity_qualifier = None
+        part_qualifier = None
+        total_qualifier = []
+        if quantity:
+            quantity_qualifier = self.create_qty_qualifier(wdresult, value, quantity)
+        if part_type != '':
+            part_qualifier = self.create_part_qualifier(part_type)
+        if quantity_qualifier:
+            if part_qualifier:
+                total_qualifier = [quantity_qualifier, part_qualifier]
+            else:
+                total_qualifier = [quantity_qualifier]
+        elif part_qualifier:
+            total_qualifier = [part_qualifier]
+        return total_qualifier
+
