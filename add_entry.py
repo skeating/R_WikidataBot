@@ -157,7 +157,7 @@ class AddEntity(AddEntry):
         :param result: the data from Reactome
         :return:
         """
-        et = result['entityType']
+        et = result['entitytype']
         if et == 'COMP':
             wditem_value = 'Q420927'
         elif et == 'DS':
@@ -169,11 +169,11 @@ class AddEntity(AddEntry):
         else:
             return
 
+        # P31 = instance of
         cpref = []
         if result['cportal'] != '':
             cpref = self.create_complex_portal_reference(result['cportal'])
-        # P31 = instance of
-        if (cpref):
+        if cpref:
             property_list["P31"] = [wdi_core.WDItemID(value=wditem_value, prop_nr="P31",
                                                       references=[copy.deepcopy(self.reference), cpref])]
         else:
@@ -202,8 +202,11 @@ class AddEntity(AddEntry):
         :return:
         """
         has_part = []
+        part_qty = []
         has_protein = []
+        protein_qty = []
         has_simple = []
+        simple_qty = []
         for partof in result['hasPart']['value']:
             datatype, ref, quantity, st_id = partof.split(' ')
             if datatype == 'EWASMOD':
@@ -213,27 +216,30 @@ class AddEntity(AddEntry):
                 protein = "\""+ref+"\""
                 if protein not in has_protein:
                     has_protein.append(protein)
+                    protein_qty.append(quantity)
             elif datatype == "SE":
                 se = "\""+ref+"\""
                 if se not in has_simple:
                     has_simple.append(se)
+                    simple_qty.append(quantity)
             elif self.is_reactome_datatype(datatype):
                 part = "\""+st_id+"\""
                 if part not in has_part:
                     has_part.append(part)
+                    part_qty.append(quantity)
 
         term_to_add = acquire_wikidata_links.WDGetData('reactomeid', 'P527', self.wikidata_sparql)
-        term_to_add.add_multiple_terms(has_part, property_list, self.reference)
+        term_to_add.add_multiple_terms(has_part, property_list, self.reference, part_qty)
         for term in term_to_add.get_missing_terms():
             global_variables.used_wd_ids['reactome'].append(term)
 
         term_to_add = acquire_wikidata_links.WDGetData('uniprotid', 'P527', self.wikidata_sparql)
-        term_to_add.add_multiple_terms(has_protein, property_list, self.reference)
+        term_to_add.add_multiple_terms(has_protein, property_list, self.reference, protein_qty)
         for term in term_to_add.get_missing_terms():
             global_variables.used_wd_ids['proteins'].append(term)
 
         term_to_add = acquire_wikidata_links.WDGetData('chebi', 'P527', self.wikidata_sparql)
-        term_to_add.add_multiple_terms(has_simple, property_list, self.reference)
+        term_to_add.add_multiple_terms(has_simple, property_list, self.reference, simple_qty)
         for term in term_to_add.get_missing_terms():
             global_variables.used_wd_ids['chebi'].append(term)
 

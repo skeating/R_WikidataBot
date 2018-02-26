@@ -4,10 +4,10 @@ from wikidataintegrator import wdi_core
 
 
 class DisplayItem():
-    '''
+    """
     Class to display the content of the resulting Wikidata page
     takes the json representation and resolves links etc
-    '''
+    """
     def __init__(self, wd_json_dict, server):
         self.item = wd_json_dict
         self.server = server
@@ -42,14 +42,15 @@ class DisplayItem():
         print('Label: ', value)
 
     def show_claims(self):
-         if 'claims' not in self.item:
+        claims = []
+        if 'claims' not in self.item:
             print('No claims field')
-         else:
+        else:
             claims = self.item['claims']
-            print('Claims:')
-            for claim_val in claims:
-                if claim_val != 'P703':
-                    self.show_claim(claims[claim_val])
+        print('Claims:')
+        for claim_val in claims:
+            if claim_val != 'P703':
+                self.show_claim(claims[claim_val])
 
     def show_claim(self, claim):
         for i in range(0, len(claim)):
@@ -90,6 +91,8 @@ class DisplayItem():
         elif obj['datatype'] == 'time':
             claim_value = obj['datavalue']['value']['time']
         elif obj['datatype'] == 'external-id':
+            claim_value = self.get_string_claim(obj)
+        elif obj['datatype'] == 'quantity':
             claim_value = self.get_string_claim(obj)
         else:
             print('Unexpected type {0} encountered'.format(obj['datatype']))
