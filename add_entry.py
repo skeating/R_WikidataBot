@@ -34,7 +34,8 @@ class AddEntry:
         term_to_add = acquire_wikidata_links.WDGetData('goterm', 'P31', self.wikidata_sparql)
         term_to_add.add_term(result['goTerm']['value'], property_list, self.reference)
         for term in term_to_add.get_missing_terms():
-            global_variables.used_wd_ids['goterms'].append(term)
+            if term not in global_variables.used_wd_ids['goterms']:
+                global_variables.used_wd_ids['goterms'].append(term)
 
     def add_citations(self, property_list, result):
         """
@@ -57,7 +58,8 @@ class AddEntry:
         term_to_add = acquire_wikidata_links.WDGetData('pmid', 'P2860', self.wikidata_sparql)
         term_to_add.add_multiple_terms(pubmed_citations, property_list, self.reference)
         for term in term_to_add.get_missing_terms():
-            global_variables.used_wd_ids['pmid'].append(term)
+            if term not in global_variables.used_wd_ids['pmid']:
+                global_variables.used_wd_ids['pmid'].append(term)
 
     def add_part_of(self, property_list, result):
         """ Function to add the part of property
@@ -76,7 +78,8 @@ class AddEntry:
         term_to_add = acquire_wikidata_links.WDGetData('reactomeid', 'P361', self.wikidata_sparql)
         term_to_add.add_multiple_terms(part_of, property_list, self.reference)
         for term in term_to_add.get_missing_terms():
-            global_variables.used_wd_ids['reactome'].append(term)
+            if term not in global_variables.used_wd_ids['reactome']:
+                global_variables.used_wd_ids['reactome'].append(term)
 
     def add_haspart(self, property_list, result):
         """
@@ -96,7 +99,8 @@ class AddEntry:
         term_to_add = acquire_wikidata_links.WDGetData('reactomeid', 'P527', self.wikidata_sparql)
         term_to_add.add_multiple_terms(has_part, property_list, self.reference)
         for term in term_to_add.get_missing_terms():
-            global_variables.used_wd_ids['reactome'].append(term)
+            if term not in global_variables.used_wd_ids['reactome']:
+                global_variables.used_wd_ids['reactome'].append(term)
 
 
 class AddPathway(AddEntry):
@@ -231,17 +235,20 @@ class AddEntity(AddEntry):
         term_to_add = acquire_wikidata_links.WDGetData('reactomeid', 'P527', self.wikidata_sparql)
         term_to_add.add_multiple_terms(has_part, property_list, self.reference, part_qty)
         for term in term_to_add.get_missing_terms():
-            global_variables.used_wd_ids['reactome'].append(term)
+            if term not in global_variables.used_wd_ids['reactome']:
+                global_variables.used_wd_ids['reactome'].append(term)
 
         term_to_add = acquire_wikidata_links.WDGetData('uniprotid', 'P527', self.wikidata_sparql)
         term_to_add.add_multiple_terms(has_protein, property_list, self.reference, protein_qty)
         for term in term_to_add.get_missing_terms():
-            global_variables.used_wd_ids['proteins'].append(term)
+            if term not in global_variables.used_wd_ids['proteins']:
+                global_variables.used_wd_ids['proteins'].append(term)
 
         term_to_add = acquire_wikidata_links.WDGetData('chebi', 'P527', self.wikidata_sparql)
         term_to_add.add_multiple_terms(has_simple, property_list, self.reference, simple_qty)
         for term in term_to_add.get_missing_terms():
-            global_variables.used_wd_ids['chebi'].append(term)
+            if term not in global_variables.used_wd_ids['chebi']:
+                global_variables.used_wd_ids['chebi'].append(term)
 
     @staticmethod
     def is_reactome_datatype(dt):
