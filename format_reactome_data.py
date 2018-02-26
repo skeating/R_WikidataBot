@@ -9,6 +9,11 @@ class ReactomeData:
         self.data_type = data_type
 
     def get_data_from_reactome(self, filename):
+        """
+
+        :param filename:
+        :return:
+        """
         if self.data_type == 'pathway':
             return self.get_pathway_data_from_reactome(filename)
         elif self.data_type == "entity":
@@ -20,6 +25,11 @@ class ReactomeData:
 
     @staticmethod
     def parse_list_references(reference):
+        """
+            Function to split multiple references for same property
+        :param reference: string from Reactome export '[ref;ref]'
+        :return: a list with each ref as an entry
+        """
         length = len(reference)
         modified_ref = ''
         if reference.startswith('[') and reference.endswith(']'):
@@ -160,12 +170,13 @@ class ReactomeData:
             variables = line.split(',')
             if len(variables) != 12:
                 print('A line in the input csv file expects 10 comma separated entries')
-                print('species,id,type,label,description,reference,goterm,ispartof,inputs, outputs, modifiers,endelement')
+                print('species,id,type,label,description,reference,goterm,ispartof,inputs, '
+                      'outputs, modifiers,endelement')
                 print('Re run WikidataExport to create an accurate file')
                 return None
             else:
                 species, st_id, event_type, label, description, reference, goterm, \
-                inputs, outputs, mods, ispartof, endelement = line.split(',')
+                    inputs, outputs, mods, ispartof, endelement = line.split(',')
                 lorefs = self.parse_list_references(reference)
                 lo_hasinput = self.parse_list_references(inputs)
                 lo_hasoutput = self.parse_list_references(outputs)
