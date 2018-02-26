@@ -33,17 +33,38 @@ def check_settings(uname):
     else:
         return [False, writewd, fast]
 
+def write_data_from_file(data_type, filename, bot, logincreds):
+        data = format_reactome_data.ReactomeData('HSA', data_type)
+        results = data.get_data_from_reactome(filename)
+        if not results:
+            print('No wikidata entries made')
+            sys.exit()
+        bot.set_logincreds(logincreds)
+        # because we are creating cyclic relationships sometimes on the first run an entry is not yet
+        # present so we check and do another run
+        # put in a count so we dont endlessly cycle
+        done = False
+        count = 0
+        while not done and count < 2:
+            print('Run no ' + str(count) + 'started =========================================================')
+            bot.create_or_update_items(results, data_type)
+            count += 1
+            if len(global_variables.used_wd_ids['reactome']) == 0:
+                done = True
+            elif count < 2:
+                global_variables.used_wd_ids['reactome'] = []
+
 
 def main(args):
     """Usage: update_wikidata  WDusername, WDpassword (input-filename)
        This program take the input-filename or use data/reactome_data-test.csv
        if none given and write the wikidata pages
     """
-    test = False
+    test = True
     filename = 'data/entity_data_test.csv'
-    t = 'E'
+    data_type = 'entity'
 #    filename = 'data/reactome_data-test.csv'
-#    t = 'P'
+#    data_type = 'pathway'
     if len(args) < 3 or len(args) > 4:
         print(main.__doc__)
         sys.exit()
@@ -67,23 +88,7 @@ def main(args):
             print('Error logging into wikidata: {0}'.format(e.args[0]))
             sys.exit()
 
-        if t == 'P':
-            data = format_reactome_data.ReactomeData('HSA', 'pathway')
-            results = data.get_data_from_reactome(filename)
-            if not results:
-                print('No wikidata entries made')
-                sys.exit()
-            bot.set_logincreds(logincreds)
-            bot.create_or_update_items(results, 'pathway')
-        elif t == 'E':
-            data = format_reactome_data.ReactomeData('HSA', 'entity')
-            results = data.get_data_from_reactome(filename)
-            if not results:
-                print('No wikidata entries made')
-                sys.exit()
-            bot.set_logincreds(logincreds)
-            bot.create_or_update_items(results, 'entity')
-
+        write_data_from_file(data_type, filename, bot, logincreds)
         bot.output_report()
         print('Upload successfully completed')
 
