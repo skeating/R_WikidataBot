@@ -55,7 +55,7 @@ class WDGetData():
         if not found:
             self.missing_terms.append(term)
 
-    def add_multiple_terms(self, value, property_list, reference):
+    def add_multiple_terms(self, value, property_list, reference, quantity=None):
         """
             Function to add the instance of the property to the property_list
             This looks up the identifier id in wikidata so that it can create the appropriate link
@@ -75,11 +75,15 @@ class WDGetData():
 
         for wikidata_result in wikidata_results["results"]["bindings"]:
             wikidata_entity = wikidata_result["item"]["value"].replace("http://www.wikidata.org/entity/", "")
+            quantity_qualifier = []
+            if quantity:
+                quantity_qualifier = self.create_qty_qualifier(wikidata_result, value, quantity)
             if self.property_id not in property_list.keys():
                 property_list[self.property_id] = []
             property_list[self.property_id].append(wdi_core.WDItemID(value=wikidata_entity,
                                                                      prop_nr=self.property_id,
-                                                                     references=[copy.deepcopy(reference)]))
+                                                                     references=[copy.deepcopy(reference)],
+                                                                     qualifiers=quantity_qualifier))
             result = "\"{0}\"".format(wikidata_result[self.property]['value'])
             if result in terms:
                 terms.remove(result)
@@ -97,3 +101,12 @@ class WDGetData():
 
     def get_missing_terms(self):
         return self.missing_terms
+
+    def create_qty_qualifier(self, wdresult, value, quantity):
+        this_item = '\"' + wdresult[self.property]['value'] + '\"'
+        if this_item in value:
+            this_index = value.index(this_item)
+            if this_index < len(quantity):
+                qualifier = wdi_core.WDQuantity(int(quantity[this_index]), prop_nr='P1114', is_qualifier=True)
+                return [qualifier]
+        return []
