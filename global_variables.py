@@ -19,3 +19,6 @@ supported_species = [dict({'ReactomeCode': 'HSA', 'name': 'Homo sapiens', 'WDIte
 
 global edited_wd_pages
 edited_wd_pages = []
+
+global exceptions
+exceptions = []

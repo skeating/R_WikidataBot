@@ -103,8 +103,8 @@ class ReactomeBot:
                     print('https://www.wikidata.org/wiki/{0}'.format(item_id_value))
             except Exception as e:
                 wdi_core.WDItemEngine.log("ERROR",
-                                          wdi_helpers.format_msg(item_id_value, 'P3937', None, str(e), type(e)))
-                print('caught exception' + str(e))
+                                          wdi_helpers.format_msg(result['pwId']['value'], 'P3937', None, str(e), type(e)))
+                global_variables.exceptions.append(e.args[0]['error']['info'])
         else:
             d = display_item.DisplayItem(wdpage.get_wd_json_representation(), global_variables.server)
             d.show_item()
@@ -152,6 +152,10 @@ class ReactomeBot:
         f.write('\n')
         f.write('wikidata entries,')
         for term in global_variables.edited_wd_pages:
+            f.write('{0},'.format(term))
+        f.write('\n')
+        f.write('exceptions,')
+        for term in global_variables.exceptions:
             f.write('{0},'.format(term))
         f.write('\n')
         f.close()
