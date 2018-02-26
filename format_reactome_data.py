@@ -122,7 +122,7 @@ class ReactomeData:
                     description = 'Open set from Reactome'
 
                 entity = dict({'pwId': {'value': st_id, 'type': 'string'},
-                               'pwLabel': {'value': self.remove_additional_name(label), 'type': 'string'},
+                               'pwLabel': {'value': label, 'type': 'string'},
                                'pwDescription': {'value': description, 'type': 'string'},
                                'hasPart': {'value': lo_haspart, 'type': 'list'},
                                'entitytype': entitytype, 'cportal': portal_id})
