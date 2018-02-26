@@ -62,7 +62,7 @@ class ReactomeData:
                 lo_haspart = self.parse_list_references(haspart)
                 lo_ispartof = self.parse_list_references(ispartof)
                 pathway = dict({'pwId': {'value': st_id, 'type': 'string'},
-                                'pwLabel': {'value': self.remove_additional_name(label), 'type': 'string'},
+                                'pwLabel': {'value': label, 'type': 'string'},
                                 'pwDescription': {'value': description, 'type': 'string'},
                                 'publication': {'value': lorefs, 'type': 'list'},
                                 'goTerm': {'value': goterm, 'type': 'string'},
