@@ -62,8 +62,8 @@ def main(args):
     test = True
     filename = 'data/modprot_data_test.csv'
     data_type = 'modprot'
-#    filename = 'data/reactome_data-test.csv'
-#    data_type = 'pathway'
+#    filename = 'data/entity_data_dup.csv'
+#    data_type = 'entity'
     if len(args) < 3 or len(args) > 4:
         print(main.__doc__)
         sys.exit()

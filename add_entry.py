@@ -351,11 +351,11 @@ class AddModProt(AddEntry):
             modref = modref_brackets[1:len(modref_brackets)-1]
             chebi = global_variables.get_chebi_from_mod(modref)
             if chebi != '':
-                has_part.append(chebi)
+                has_part.append('\"' + chebi + '\"')
                 part_qty.append(loc)
 
         term_to_add = acquire_wikidata_links.WDGetData('chebi', 'P527', self.wikidata_sparql)
-        term_to_add.add_multiple_terms(has_part, property_list, self.reference, part_qty)
+        term_to_add.add_multiple_terms(has_part, property_list, self.reference, None, '', part_qty)
         for term in term_to_add.get_missing_terms():
             if term not in global_variables.used_wd_ids['chebi']:
                 global_variables.used_wd_ids['chebi'].append(term)
