@@ -59,9 +59,9 @@ def main(args):
        This program take the input-filename or use data/reactome_data-test.csv
        if none given and write the wikidata pages
     """
-    test = False
-    filename = 'data/reaction_data-test.csv'
-    data_type = 'reaction'
+    test = True
+    filename = 'data/modprot_data_test.csv'
+    data_type = 'modprot'
 #    filename = 'data/reactome_data-test.csv'
 #    data_type = 'pathway'
     if len(args) < 3 or len(args) > 4:

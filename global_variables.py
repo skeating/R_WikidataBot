@@ -22,3 +22,19 @@ edited_wd_pages = []
 
 global exceptions
 exceptions = []
+
+global psimod
+psimod = []
+
+def set_psimod(data):
+    global psimod
+    psimod = data
+
+def get_chebi_from_mod(modref):
+    if len(psimod) == 0:
+        return ''
+    else:
+        for ref in psimod:
+            if ref['id'] == modref:
+                return ref['chebi']
+    return ''
