@@ -71,7 +71,7 @@ class WDGetData():
         :param property_list: list of properties that will be added to the entry
         :param quantity: list of the quantity of substance in the given complex/set/reaction
         :param part_type: string representing the role of a substance in a reaction
-        :return: None
+        :param loc: list of ordinals for phosphorylation sites
         """
         if self.property_reference == '' or len(value) == 0:
             return
@@ -138,12 +138,12 @@ class WDGetData():
 
     def create_series_qualifier(self, wdresult, value, quantity):
         """
-            Function to create the quantity qualifier to respresent stoichiometry
+            Function to create the quantity qualifier to respresent series ordinal of phosphorylation
 
         :param wdresult: results from a wikidata query for a list of items
         :param value: list of the items
-        :param quantity: list of the quantity for each item (indexed as in value)
-        :return: a wikidata qualifier statement for quantity
+        :param quantity: list of the ordinal for each item (indexed as in value)
+        :return: a wikidata qualifier statement for series ordinal
         """
         this_item = '\"' + wdresult[self.property]['value'] + '\"'
         if this_item in value:
