@@ -50,7 +50,7 @@ def write_data_from_file(data_type, filename, bot, logincreds):
             count += 1
             if len(global_variables.used_wd_ids['reactome']) == 0:
                 done = True
-            elif count < 2:
+            elif count < 1:
                 global_variables.used_wd_ids['reactome'] = []
 
 
@@ -60,7 +60,7 @@ def main(args):
        if none given and write the wikidata pages
     """
     test = False
-    filename = 'data/reaction_data-test.csv'
+    filename = 'data/hsa_reaction_data.csv'
     data_type = 'reaction'
 #    filename = 'data/reactome_data-test.csv'
 #    data_type = 'pathway'
