@@ -64,6 +64,9 @@ class ExtractExternalData:
 
     def get_pro_data(self, lines):
         for line in lines:
+            if line.endswith('\n'):
+                length = len(line)
+                line = line[0:length-1]
             vars = line.split(',')
             if len(vars) < 2:
                 continue

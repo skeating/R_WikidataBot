@@ -331,9 +331,12 @@ class AddModProt(AddEntry):
                                                    references=[copy.deepcopy(self.reference)])]
 
         # P2888 = exact match
-        url = 'http://purl.obolibrary.org/obo/{0}'.format(global_variables.get_pro_for_id(self.reactome_id))
-        property_list["P2888"] = [wdi_core.WDUrl(url, prop_nr='P2888',
-                                                 references=[copy.deepcopy(self.reference)])]
+        pro = global_variables.get_pro_for_id(self.reactome_id)
+        if pro != '':
+            pro = pro.replace(':', '_')
+            url = 'http://purl.obolibrary.org/obo/{0}'.format(pro)
+            property_list["P2888"] = [wdi_core.WDUrl(url, prop_nr='P2888',
+                                                     references=[copy.deepcopy(self.reference)])]
 
         # P3937 = Reactome ID
         property_list["P3937"] = [wdi_core.WDString(value=self.reactome_id, prop_nr='P3937')]

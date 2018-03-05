@@ -145,11 +145,13 @@ class WDGetData():
         :param quantity: list of the ordinal for each item (indexed as in value)
         :return: a wikidata qualifier statement for series ordinal
         """
+
         this_item = '\"' + wdresult[self.property]['value'] + '\"'
         if this_item in value:
             this_index = value.index(this_item)
             if this_index < len(quantity):
-                qualifier = wdi_core.WDQuantity(int(quantity[this_index]), prop_nr='P1545', is_qualifier=True)
+                qualifier = wdi_core.WDString(quantity[this_index], prop_nr='P1545', is_qualifier=True)
+                quantity.pop(this_index)
                 return qualifier
         return []
 

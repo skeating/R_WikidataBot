@@ -234,7 +234,15 @@ class ReactomeData:
                 species, entitytype, st_id, label, protein, haspart, endelement = line.split(',')
                 lo_haspart = self.parse_list_references(haspart)
 
-                description = ''
+                label_parts = label.split(' ')
+                description = '{0} protein phosphorlyated'.format(label_parts[0])
+                no_parts = len(label_parts)
+                if no_parts > 2:
+                    description = description + ' at '
+                    for i in range(1,no_parts-1):
+                        description = description + label_parts[i]
+                        if i < no_parts-2:
+                            description = description + ' '
 
                 entity = dict({'pwId': {'value': st_id, 'type': 'string'},
                                'pwLabel': {'value': label, 'type': 'string'},
