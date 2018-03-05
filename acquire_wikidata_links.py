@@ -62,7 +62,7 @@ class WDGetData():
         if not found:
             self.missing_terms.append(term)
 
-    def add_multiple_terms(self, value, property_list, reference, quantity=None, part_type=''):
+    def add_multiple_terms(self, value, property_list, reference, quantity=None, part_type='', loc=None):
         """
             Function to add the instance of the property to the property_list
             This looks up the identifier id in wikidata so that it can create the appropriate link
@@ -71,9 +71,9 @@ class WDGetData():
         :param property_list: list of properties that will be added to the entry
         :param quantity: list of the quantity of substance in the given complex/set/reaction
         :param part_type: string representing the role of a substance in a reaction
-        :return: None
+        :param loc: list of ordinals for phosphorylation sites
         """
-        if self.property_reference == '':
+        if self.property_reference == '' or len(value) == 0:
             return
         terms = value
 
@@ -85,7 +85,7 @@ class WDGetData():
 
         for wikidata_result in wikidata_results["results"]["bindings"]:
             wikidata_entity = wikidata_result["item"]["value"].replace("http://www.wikidata.org/entity/", "")
-            total_qualifier = self.create_qualifier(wikidata_result, value, quantity, part_type)
+            total_qualifier = self.create_qualifier(wikidata_result, value, quantity, part_type, loc)
             if self.property_id not in property_list.keys():
                 property_list[self.property_id] = []
             property_list[self.property_id].append(wdi_core.WDItemID(value=wikidata_entity,
@@ -136,7 +136,24 @@ class WDGetData():
             qualifier = wdi_core.WDItemID('Q45342890', prop_nr='P31', is_qualifier=True)
         return qualifier
 
-    def create_qualifier(self, wdresult, value, quantity, part_type):
+    def create_series_qualifier(self, wdresult, value, quantity):
+        """
+            Function to create the quantity qualifier to respresent series ordinal of phosphorylation
+
+        :param wdresult: results from a wikidata query for a list of items
+        :param value: list of the items
+        :param quantity: list of the ordinal for each item (indexed as in value)
+        :return: a wikidata qualifier statement for series ordinal
+        """
+        this_item = '\"' + wdresult[self.property]['value'] + '\"'
+        if this_item in value:
+            this_index = value.index(this_item)
+            if this_index < len(quantity):
+                qualifier = wdi_core.WDQuantity(int(quantity[this_index]), prop_nr='P1545', is_qualifier=True)
+                return qualifier
+        return []
+
+    def create_qualifier(self, wdresult, value, quantity, part_type, location):
         """
             Function to create a qualifier if it is appropriate
 
@@ -144,6 +161,7 @@ class WDGetData():
         :param value: list of the items
         :param quantity: list of the quantity for each item (indexed as in value)
         :param part_type: string either 'inputs', 'outputs' or 'mods'
+        :param location: list of locations for modified residues
 
             Note this function calls create_qty_qualifier and create_part_qualifier
             and constructs the overall qualifier if appropriate
@@ -152,11 +170,14 @@ class WDGetData():
         """
         quantity_qualifier = None
         part_qualifier = None
+        series_qualifier = None
         total_qualifier = []
         if quantity:
             quantity_qualifier = self.create_qty_qualifier(wdresult, value, quantity)
         if part_type != '':
             part_qualifier = self.create_part_qualifier(part_type)
+        if location:
+            series_qualifier = self.create_series_qualifier(wdresult, value, location)
         if quantity_qualifier:
             if part_qualifier:
                 total_qualifier = [quantity_qualifier, part_qualifier]
@@ -164,6 +185,8 @@ class WDGetData():
                 total_qualifier = [quantity_qualifier]
         elif part_qualifier:
             total_qualifier = [part_qualifier]
+        elif series_qualifier:
+            total_qualifier = [series_qualifier]
         return total_qualifier
 
     # helper functions

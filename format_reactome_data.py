@@ -1,6 +1,8 @@
 __author__ = 'Sarah Keating'
 
 import os
+import global_variables
+import extract_external_data
 
 
 class ReactomeData:
@@ -20,6 +22,8 @@ class ReactomeData:
             return self.get_entity_data_from_reactome(filename)
         elif self.data_type == "reaction":
             return self.get_reaction_data_from_reactome(filename)
+        elif self.data_type == "modprot":
+            return self.get_modprot_data_from_reactome(filename)
         else:
             return []
 
@@ -41,9 +45,7 @@ class ReactomeData:
         This function creates a JSON representation of the Reactome data from a precise csv export
         this emulates the results of the wikipathways query so common code can be used
 
-        If a filename is not given it will look for the default file
-
-        The form of the form of the csv file is:
+        The form of the csv file for a pathway is:
 
         species,stableId,type,name,description,[publication;publication;...],goterm,[part1;part2],[partof1;partof2],None
 
@@ -88,9 +90,7 @@ class ReactomeData:
         This function creates a JSON representation of the Reactome data from a precise csv export
         this emulates the results of the wikipathways query so common code can be used
 
-        If a filename is not given it will look for the default file
-
-        The form of the form of the csv file is:
+        The form of the csv file for an entity is:
 
         species_code,entity_code,name,stableId,[part;part],complexportalid (only for complex),None
 
@@ -148,9 +148,7 @@ class ReactomeData:
         This function creates a JSON representation of the Reactome data from a precise csv export
         this emulates the results of the wikipathways query so common code can be used
 
-        If a filename is not given it will look for the default file
-
-        The form of the form of the csv file is:
+        The form of the csv file for a reaction is:
 
         species_code,stableId,eventType,Name,Description,[publication;publication;..],goterm,
           [haspart_input;haspart_input], [haspart_output;], [haspart_mod;..],[partof],None
@@ -195,3 +193,57 @@ class ReactomeData:
         b = dict({'bindings': pathways})
         results = dict({'results': b})
         return results
+
+    def get_modprot_data_from_reactome(self, filename):
+        """
+        This function creates a JSON representation of the Reactome data from a precise csv export
+        this emulates the results of the wikipathways query so common code can be used
+
+        The form of the csv file for a modified protein is:
+
+        species_code,entity_code,stableId,name,uniprot,[part;part],None
+
+        :param filename:
+        :return:
+        """
+        if not os.path.isfile(filename):
+            print('{0} not found aborting ...'.format(filename))
+            return None
+
+        # set up global dictionaries for external ontologies
+        exter_data = extract_external_data.ExtractExternalData('psimod')
+        exter_data.populate_data()
+        global_variables.set_psimod(exter_data.get_data())
+        exter_data = extract_external_data.ExtractExternalData('PRO')
+        exter_data.populate_data()
+        global_variables.set_prodata(exter_data.get_data())
+
+        f = open(filename, 'r')
+        lines = f.readlines()
+        f.close()
+        entities = []
+        for line in lines:
+            variables = line.split(',')
+            if len(variables) != 7:
+                print('A line in the input csv file expects 7 comma separated entries')
+                print('species_code,entity_code,stableId,name,uniprot,[part;part],'
+                      'endelement')
+                print('Re run WikidataExport to create an accurate file')
+                return None
+            else:
+                species, entitytype, st_id, label, protein, haspart, endelement = line.split(',')
+                lo_haspart = self.parse_list_references(haspart)
+
+                description = ''
+
+                entity = dict({'pwId': {'value': st_id, 'type': 'string'},
+                               'pwLabel': {'value': label, 'type': 'string'},
+                               'pwDescription': {'value': description, 'type': 'string'},
+                               'protein':{'value': protein, 'type': 'string'},
+                               'hasPart': {'value': lo_haspart, 'type': 'list'},
+                               'entitytype': entitytype})
+                entities.append(entity)
+        b = dict({'bindings': entities})
+        results = dict({'results': b})
+        return results
+

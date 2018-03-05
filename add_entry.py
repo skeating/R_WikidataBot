@@ -304,3 +304,66 @@ class AddReaction(AddEntity):
         AddEntity.add_entity_parts(self, property_list, result, 'outputs')
         AddEntity.add_entity_parts(self, property_list, result, 'mods')
 
+class AddModProt(AddEntry):
+    """
+    Class to add a Pathway entry
+    """
+    def __init__(self, reactome_id, wd_sparql, reference, species):
+        AddEntry.__init__(self, reactome_id, wd_sparql, reference, species)
+
+    def add_modprot(self, property_list, result):
+        """
+        function to add modified protein item to wikidata
+        :param property_list: the list of property entries that will be made
+        :param result: the data from Reactome
+        :return:
+        """
+
+        # P279 = subclass of
+        term_to_add = acquire_wikidata_links.WDGetData('uniprotid', 'P279', self.wikidata_sparql)
+        term_to_add.add_term(result['protein']['value'], property_list, self.reference)
+        for term in term_to_add.get_missing_terms():
+            if term not in global_variables.used_wd_ids['proteins']:
+                global_variables.used_wd_ids['proteins'].append(term)
+
+        # P703 = found in taxon
+        property_list["P703"] = [wdi_core.WDItemID(value=self.species, prop_nr='P703',
+                                                   references=[copy.deepcopy(self.reference)])]
+
+        # P2888 = exact match
+        url = 'http://purl.obolibrary.org/obo/{0}'.format(global_variables.get_pro_for_id(self.reactome_id))
+        property_list["P2888"] = [wdi_core.WDUrl(url, prop_nr='P2888',
+                                                 references=[copy.deepcopy(self.reference)])]
+
+        # P3937 = Reactome ID
+        property_list["P3937"] = [wdi_core.WDString(value=self.reactome_id, prop_nr='P3937')]
+
+        AddModProt.add_modprot_parts(self, property_list, result)
+
+    def add_modprot_parts(self, property_list, result):
+        """
+            Function to write the parts of a modified protein which might be
+            other reactome entities such as sets containing complexes
+        :param property_list: the list of property entries that will be made
+        :param result: the data from Reactome
+        :return:
+        """
+        has_part = []
+        part_qty = []
+
+        for partof in result['hasPart']['value']:
+            name, modref_brackets, loc = partof.split(' ')
+            modref = modref_brackets[1:len(modref_brackets)-1]
+            chebi = global_variables.get_chebi_from_mod(modref)
+            if chebi != '':
+                has_part.append('\"' + chebi + '\"')
+                part_qty.append(loc)
+
+        term_to_add = acquire_wikidata_links.WDGetData('chebi', 'P527', self.wikidata_sparql)
+        term_to_add.add_multiple_terms(has_part, property_list, self.reference, None, '', part_qty)
+        for term in term_to_add.get_missing_terms():
+            if term not in global_variables.used_wd_ids['chebi']:
+                global_variables.used_wd_ids['chebi'].append(term)
+
+
+

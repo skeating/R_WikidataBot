@@ -64,6 +64,7 @@ def main(args):
     data_type = 'reaction'
 #    filename = 'data/reactome_data-test.csv'
 #    data_type = 'pathway'
+
     if len(args) < 3 or len(args) > 4:
         print(main.__doc__)
         sys.exit()
