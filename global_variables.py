@@ -26,9 +26,16 @@ exceptions = []
 global psimod
 psimod = []
 
+global prodata
+prodat = []
+
 def set_psimod(data):
     global psimod
     psimod = data
+
+def set_prodata(data):
+    global prodata
+    prodata = data
 
 def get_chebi_from_mod(modref):
     if len(psimod) == 0:
@@ -37,4 +44,13 @@ def get_chebi_from_mod(modref):
         for ref in psimod:
             if ref['id'] == modref:
                 return ref['chebi']
+    return ''
+
+def get_pro_for_id(id):
+    if len(prodata) == 0:
+        return ''
+    else:
+        for ref in prodata:
+            if ref['id'] == id:
+                return ref['pro']
     return ''

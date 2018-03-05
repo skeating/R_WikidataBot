@@ -214,6 +214,9 @@ class ReactomeData:
         exter_data = extract_external_data.ExtractExternalData('psimod')
         exter_data.populate_data()
         global_variables.set_psimod(exter_data.get_data())
+        exter_data = extract_external_data.ExtractExternalData('PRO')
+        exter_data.populate_data()
+        global_variables.set_prodata(exter_data.get_data())
 
         f = open(filename, 'r')
         lines = f.readlines()

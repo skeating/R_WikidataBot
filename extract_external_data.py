@@ -1,13 +1,12 @@
 __author__ = 'Sarah'
 
-import sys
-
 class ExtractExternalData:
     def __init__(self, data_type):
         self.data_type = data_type
         self.data = []
 
-        self.supported_data = [{'datatype': 'psimod', 'datafile': './ontology_data/psimod_obo.txt'}]
+        self.supported_data = [{'datatype': 'psimod', 'datafile': './ontology_data/psimod_obo.txt'},
+            {'datatype': 'PRO', 'datafile': './ontology_data/pro_ref.csv'}]
 
     def populate_data(self):
         filename = self.get_data_file()
@@ -16,7 +15,10 @@ class ExtractExternalData:
         f = open(filename, 'r')
         lines = f.readlines()
         f.close()
-        self.get_terms(lines)
+        if self.data_type == 'psimod':
+            self.get_psimod_terms(lines)
+        elif self.data_type == 'PRO':
+            self.get_pro_data(lines)
 
     def get_data(self):
         return self.data
@@ -27,7 +29,7 @@ class ExtractExternalData:
                 return data['datafile']
         return None
 
-    def get_terms(self, lines):
+    def get_psimod_terms(self, lines):
         for i in range(0, len(lines)):
             if not lines[i].startswith('[Term]'):
                 continue
@@ -59,5 +61,15 @@ class ExtractExternalData:
             return term
         else:
             return None
+
+    def get_pro_data(self, lines):
+        for line in lines:
+            vars = line.split(',')
+            if len(vars) < 2:
+                continue
+            term = dict({'id': vars[0], 'pro': vars[1]})
+            if term:
+                self.data.append(term)
+
 
 
