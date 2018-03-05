@@ -4,6 +4,7 @@ from wikidataintegrator import wdi_core, wdi_property_store, wdi_helpers
 import add_entry
 import global_variables
 from time import gmtime, strftime
+import time
 from SPARQLWrapper import SPARQLWrapper, JSON
 import display_item
 import os
@@ -24,6 +25,8 @@ class ReactomeBot:
         self.wikidata_sparql.setReturnFormat(JSON)
 
         self.current_species = 'Q15978631'
+
+        wdi_core.WDItemEngine.setup_logging(log_name="WD_bot_run-{}.log".format(time.strftime('%Y%m%d_%H_%M', time.localtime())))
 
         # tell the properties about reactome ID
         wdi_property_store.wd_properties['P3937'] = {
@@ -121,18 +124,18 @@ class ReactomeBot:
             os.makedirs('logs')
         timestringnow = gmtime()
         filename = 'logs/wikidata_update_{0}-{1}-{2}.csv'.format(timestringnow[0], timestringnow[1], timestringnow[2])
-        # pmidadd = 'pmids.bat'
-        # fp = open(pmidadd, 'w')
+        pmidadd = 'pmids.bat'
+        fp = open(pmidadd, 'w')
         f = open(filename, 'w')
         f.write('missing pmids,')
         for pmid in global_variables.used_wd_ids['pmid']:
             f.write('{0},'.format(pmid))
-        #     if pmid != '""':
-        #         length = len(pmid)
-        #         short = pmid[1:length-1]
-        #          fp.write('C:\curl\src\curl.exe --header \"Authorization: '
-        #     'Token 6277c658b5e42679f8b0f88309358ec1e0265533\" '
-        #     'tools.wmflabs.org/fatameh/token/pmid/add/{0}\n'.format(short))
+            if pmid != '""':
+                length = len(pmid)
+                short = pmid[1:length-1]
+                fp.write('C:\curl\src\curl.exe --header \"Authorization: '
+            'Token 6277c658b5e42679f8b0f88309358ec1e0265533\" '
+            'tools.wmflabs.org/fatameh/token/pmid/add/{0}\n'.format(short))
         f.write('\n')
         f.write('missing go terms,')
         for term in global_variables.used_wd_ids['goterms']:
@@ -159,6 +162,7 @@ class ReactomeBot:
             f.write('{0},'.format(term))
         f.write('\n')
         f.close()
+        fp.close()
     
     def set_logincreds(self, logincreds):
         """

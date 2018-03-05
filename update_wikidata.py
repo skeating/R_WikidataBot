@@ -50,7 +50,7 @@ def write_data_from_file(data_type, filename, bot, logincreds):
             count += 1
             if len(global_variables.used_wd_ids['reactome']) == 0:
                 done = True
-            elif count < 2:
+            elif count < 1:
                 global_variables.used_wd_ids['reactome'] = []
 
 
@@ -59,11 +59,12 @@ def main(args):
        This program take the input-filename or use data/reactome_data-test.csv
        if none given and write the wikidata pages
     """
-    test = True
-    filename = 'data/modprot_data_test.csv'
-    data_type = 'modprot'
-#    filename = 'data/entity_data_dup.csv'
-#    data_type = 'entity'
+    test = False
+    filename = 'data/hsa_reaction_data.csv'
+    data_type = 'reaction'
+#    filename = 'data/reactome_data-test.csv'
+#    data_type = 'pathway'
+
     if len(args) < 3 or len(args) > 4:
         print(main.__doc__)
         sys.exit()
