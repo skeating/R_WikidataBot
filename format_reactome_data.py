@@ -232,6 +232,9 @@ class ReactomeData:
                 return None
             else:
                 species, entitytype, res_type, st_id, label, protein, haspart, endelement = line.split(',')
+                # leave out proteins without modifications specified
+                if haspart == '[]':
+                    continue
                 lo_haspart = self.parse_list_references(haspart)
 
                 label_parts = label.split(' ')
