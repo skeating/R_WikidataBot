@@ -224,25 +224,32 @@ class ReactomeData:
         entities = []
         for line in lines:
             variables = line.split(',')
-            if len(variables) != 7:
+            if len(variables) != 8:
                 print('A line in the input csv file expects 7 comma separated entries')
-                print('species_code,entity_code,stableId,name,uniprot,[part;part],'
+                print('species_code,entity_code,type,stableId,name,uniprot,[part;part],'
                       'endelement')
                 print('Re run WikidataExport to create an accurate file')
                 return None
             else:
-                species, entitytype, st_id, label, protein, haspart, endelement = line.split(',')
+                species, entitytype, res_type, st_id, label, protein, haspart, endelement = line.split(',')
                 lo_haspart = self.parse_list_references(haspart)
 
                 label_parts = label.split(' ')
-                description = '{0} protein phosphorlyated'.format(label_parts[0])
-                no_parts = len(label_parts)
-                if no_parts > 2:
-                    description = description + ' at '
-                    for i in range(1,no_parts-1):
-                        description = description + label_parts[i]
-                        if i < no_parts-2:
-                            description = description + ' '
+                if res_type == 'P':
+                    description = '{0} protein phosphorlyated'.format(label_parts[0])
+                    no_parts = len(label_parts)
+                    if no_parts > 2:
+                        description = description + ' at '
+                        for i in range(1,no_parts-1):
+                            description = description + label_parts[i]
+                            if i < no_parts-2:
+                                description = description + ' '
+                else:
+                    no_parts = len(label_parts)
+                    if no_parts < 2:
+                        description = '{0} from reactome'.format(label_parts[0])
+                    else:
+                        description = '{1} replaces {0}'.format(label_parts[0], label_parts[no_parts-1])
 
                 entity = dict({'pwId': {'value': st_id, 'type': 'string'},
                                'pwLabel': {'value': label, 'type': 'string'},

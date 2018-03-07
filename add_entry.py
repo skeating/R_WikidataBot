@@ -355,8 +355,18 @@ class AddModProt(AddEntry):
         part_qty = []
 
         for partof in result['hasPart']['value']:
-            name, modref_brackets, loc = partof.split(' ')
-            modref = modref_brackets[1:len(modref_brackets)-1]
+            vars = partof.split(' [')
+            if len(vars) != 2:
+                continue
+            else:
+                modref_parts = vars[1].split('] ')
+                if len(modref_parts) != 2:
+                    continue
+                else:
+                    name = vars[0]
+                    modref = modref_parts[0]
+                    loc = modref_parts[1]
+
             chebi = global_variables.get_chebi_from_mod(modref)
             if chebi != '':
                 has_part.append('\"' + chebi + '\"')

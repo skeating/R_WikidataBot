@@ -60,7 +60,7 @@ def main(args):
        if none given and write the wikidata pages
     """
     test = False
-    filename = 'data/modprot_data_test.csv'
+    filename = 'data/hsa_modprot_data.csv'
     data_type = 'modprot'
 #    filename = 'data/reactome_data-test.csv'
 #    data_type = 'pathway'
