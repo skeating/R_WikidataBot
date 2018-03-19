@@ -107,14 +107,15 @@ class ReactomeBot:
             except Exception as e:
                 wdi_core.WDItemEngine.log("ERROR",
                                           wdi_helpers.format_msg(result['pwId']['value'], 'P3937', None, str(e), type(e)))
-                global_variables.exceptions.append(e.args[0]['error']['info'])
+                ex_error = e.args[0]['error']['info'].replace(',', ':')
+                global_variables.exceptions.append(ex_error)
         else:
             d = display_item.DisplayItem(wdpage.get_wd_json_representation(), global_variables.server)
             d.show_item()
             print('{0}'.format(result['pwLabel']['value']))
 
     @staticmethod
-    def output_report():
+    def output_report(data_type):
         """
         Function to write a report detailing any missing wikidata entries
         Creates a file logs/wikidata_update_{time}.csv
@@ -123,8 +124,9 @@ class ReactomeBot:
         if not os.path.exists('logs'):
             os.makedirs('logs')
         timestringnow = gmtime()
-        filename = 'logs/wikidata_update_{0}-{1}-{2}.csv'.format(timestringnow[0], timestringnow[1], timestringnow[2])
-        pmidadd = 'pmids.bat'
+        filename = 'logs/wikidata_update_{0}-{1}-{2}-{3}.csv'.format(timestringnow[0],
+                                                                     timestringnow[1], timestringnow[2], data_type)
+        pmidadd = 'logs/pmids-{0}.bat'.format(data_type)
         fp = open(pmidadd, 'w')
         f = open(filename, 'w')
         f.write('missing pmids,')

@@ -63,7 +63,7 @@ class ReactomeData:
         for line in lines:
             variables = line.split(',')
             if len(variables) != 10:
-                print('A line in the input csv file expects 10 comma separated entries')
+                print('A line in the input csv file for a pathway expects 10 comma separated entries')
                 print('species,id,type,label,description,reference,goterm,haspart,ispartof,endelement')
                 print('Re run WikidataExport to create an accurate file')
                 return None
@@ -108,7 +108,7 @@ class ReactomeData:
         for line in lines:
             variables = line.split(',')
             if len(variables) != 6 and len(variables) != 7:
-                print('A line in the input csv file expects 6/7 comma separated entries')
+                print('A line in the input csv file for an entity expects 6/7 comma separated entries')
                 print('species_code,entity_code,stableId,name,[part;part],'
                       'complexportalid (only for complex),endelement')
                 print('Re run WikidataExport to create an accurate file')
@@ -167,8 +167,8 @@ class ReactomeData:
         for line in lines:
             variables = line.split(',')
             if len(variables) != 12:
-                print('A line in the input csv file expects 10 comma separated entries')
-                print('species,id,type,label,description,reference,goterm,ispartof,inputs, '
+                print('A line in the input csv file for a reaction expects 12 comma separated entries')
+                print('species,id,type,label,description,reference,goterm,ispartof,inputs,'
                       'outputs, modifiers,endelement')
                 print('Re run WikidataExport to create an accurate file')
                 return None
@@ -225,7 +225,7 @@ class ReactomeData:
         for line in lines:
             variables = line.split(',')
             if len(variables) != 8:
-                print('A line in the input csv file expects 7 comma separated entries')
+                print('A line in the input csv file for a modified protein expects 8 comma separated entries')
                 print('species_code,entity_code,type,stableId,name,uniprot,[part;part],'
                       'endelement')
                 print('Re run WikidataExport to create an accurate file')
