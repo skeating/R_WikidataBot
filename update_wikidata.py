@@ -87,10 +87,20 @@ def main(args):
         except Exception as e:
             print('Error logging into wikidata: {0}'.format(e.args[0]))
             sys.exit()
-
-        write_data_from_file(data_type, filename, bot, logincreds)
-        bot.output_report()
-        print('Upload successfully completed')
+        if not test:
+            if all:
+                for i in range(1,4):
+                    write_data_from_file(data_type_all[i], filename_all[i], bot, logincreds)
+                    bot.output_report(data_type_all[i])
+                    print('Upload {0} successfully completed'.format(data_type_all[i]))
+            else:
+                write_data_from_file(data_type, filename, bot, logincreds)
+                bot.output_report(data_type)
+                print('Upload {0} successfully completed'.format(data_type))
+        else:
+            write_data_from_file(data_type, filename, bot, logincreds)
+            bot.output_report(data_type)
+            print('Upload {0} successfully completed'.format(data_type))
 
 if __name__ == '__main__':
     main(sys.argv)
